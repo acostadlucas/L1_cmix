@@ -236,8 +236,9 @@ print(f"This is the final combined DataFrame:\n{combined_df}")
  """
 
 
-########################################################################
-
+########################################################################7
+# une filas que se separan por tener una tabla con filas que poseen doble renglon
+# BIEN
 
 import pandas as pd
 import numpy as np
@@ -245,58 +246,36 @@ pd.options.mode.chained_assignment = None
 
 data = {
     'Col1': ["M-2000-36140-001", np.nan, "-", np.nan, "L", np.nan, "A", np.nan, "B"],
-    'Col2': ["PL", "-", np.nan, np.nan, "u", np.nan, "a", np.nan, "b"],
+    'Col2': ["PL", "-", np.nan, np.nan, "u", np.nan, "a", "np.nan", "b"],
     'Col3': ["00", "-", np.nan, np.nan, "k's", np.nan, "x", np.nan, "y"],
     'Col4': ["Puesta tierra en suelo Rocoso", "Protocolos de resistividad - Seccionamiento LT", np.nan, "VHA", np.nan, "PURETE", np.nan, "Value", np.nan]
 }
 
-df = pd.DataFrame(data)
+dfa = pd.DataFrame(data)
+print(dfa.isna().any().any())
+def clean_double_row(df):
+    # Select rows with NaN values in any column
+    nan_rows = df[df.isna().any(axis=1)]
 
-# Select rows with NaN values in any column
-nan_rows = df[df.isna().any(axis=1)]
+    # Calculate the proportion of non-null values per row
+    def calculate_completeness(row):
+        non_null_count = row.count()
+        total_columns = len(row)
+        completeness = non_null_count / total_columns * 100
+        return completeness
 
-# Calculate the proportion of non-null values per row
-def calculate_completeness(row):
-    non_null_count = row.count()
-    total_columns = len(row)
-    completeness = non_null_count / total_columns * 100
-    return completeness
+    # Apply the function to each row of the DataFrame
+    nan_rows.loc[:, 'Completeness'] = nan_rows.apply(calculate_completeness, axis=1)
 
-# Apply the function to each row of the DataFrame
-nan_rows.loc[:, 'Completeness'] = nan_rows.apply(calculate_completeness, axis=1)
-
-# Initialize variables
-combined_rows = []
-current_combined_row = None
-
-# Iterate through nan_rows
-for index, row in nan_rows.iterrows():
-    if current_combined_row is None or row['Completeness'] == 75:
-        if current_combined_row is not None:
-            combined_rows.append(current_combined_row)
-        current_combined_row = row.copy()
-    else:
-        for col in df.columns:
-            if pd.notna(row[col]):
-                if pd.notna(current_combined_row[col]):
-                    current_combined_row[col] = current_combined_row[col] + ' ' + row[col]
-                else:
-                    current_combined_row[col] = row[col]
-
-# Append the last combined row
-if current_combined_row is not None:
-    combined_rows.append(current_combined_row)
-
-# Create a DataFrame from the combined rows
-combined_df = pd.DataFrame(combined_rows)
-
-while True:
-    new_combined_rows = []
+    # Initialize variables
+    combined_rows = []
     current_combined_row = None
-    for index, row in combined_df.iterrows():
-        if current_combined_row is None or row['Completeness'] >= 75:
+
+    # Iterate through nan_rows
+    for index, row in nan_rows.iterrows():
+        if current_combined_row is None or row['Completeness'] == 75:
             if current_combined_row is not None:
-                new_combined_rows.append(current_combined_row)
+                combined_rows.append(current_combined_row)
             current_combined_row = row.copy()
         else:
             for col in df.columns:
@@ -305,18 +284,111 @@ while True:
                         current_combined_row[col] = current_combined_row[col] + ' ' + row[col]
                     else:
                         current_combined_row[col] = row[col]
-    if current_combined_row is not None:
-        new_combined_rows.append(current_combined_row)
-    if len(new_combined_rows) == len(combined_df):
-        break
-    combined_df = pd.DataFrame(new_combined_rows)
 
+    # Append the last combined row
+    if current_combined_row is not None:
+        combined_rows.append(current_combined_row)
+
+    # Create a DataFrame from the combined rows
+    combined_df = pd.DataFrame(combined_rows)
+
+    while True:
+        new_combined_rows = []
+        current_combined_row = None
+        for index, row in combined_df.iterrows():
+            if current_combined_row is None or row['Completeness'] >= 75:
+                if current_combined_row is not None:
+                    new_combined_rows.append(current_combined_row)
+                current_combined_row = row.copy()
+            else:
+                for col in df.columns:
+                    if pd.notna(row[col]):
+                        if pd.notna(current_combined_row[col]):
+                            current_combined_row[col] = current_combined_row[col] + ' ' + row[col]
+                        else:
+                            current_combined_row[col] = row[col]
+        if current_combined_row is not None:
+            new_combined_rows.append(current_combined_row)
+        if len(new_combined_rows) == len(combined_df):
+            break
+        combined_df = pd.DataFrame(new_combined_rows)
+    combined_df = combined_df.drop(columns=["Completeness"])
+    df = df.dropna()
+    new_df = pd.concat([df, combined_df])
+    
+    return new_df
+
+""" combined_df = combined_df.drop(columns=["Completeness"])
 print("This is the original DataFrame:")
 print(df)
 print("\nThis is the DataFrame with NaN and percentage:")
 print(nan_rows)
+print("\nThis is the DataFrame without NaN and percentage:")
+df = df.dropna()
+print(df)
 print("\nThis is the final combined DataFrame:")
 print(combined_df)
+df = pd.concat([df, combined_df])
+print("\nThis is the final clean DataFrame:")
+print(df) """
+print("\nThis is the final clean DataFrame:")
+print(clean_double_row(dfa))
+
+##################################################################################################################################################
+# modificar si la tabla tiene una columna de mas
+# BIEN
+
+import pandas as pd
+import numpy as np
+import difflib
+
+data = {
+    'DOC. N°': ["M-2000-36140-001", "L-0920-16200-001", "L-0920-16200-001", "M-2000-16100-001"],
+    'Tipo': ["PL", "PL", "PL", "PL"],
+    'Rev.': ["00", "00", "00", "00"],
+    'Unnamed: 0': ["A", "B", "C", "D"],
+    'Descripción': [np.nan, np.nan, np.nan, np.nan],
+    #'situación': [np.nan, np.nan, np.nan, np.nan],  # Añadida para la última columna
+}
+
+tabla1 = pd.DataFrame(data)
+print(f"Esta es la tabla original \n{tabla1}")
+
+def clean_unnamed_col(tabla):
+    # Verificar si la tabla tiene 5 columnas y el header de la última columna es similar a "situacion"
+    if len(tabla.columns) == 5 and not \
+            difflib.SequenceMatcher(None, tabla.columns[-1].lower(), "situacion").ratio() >= 0.9:
+        # Definir palabras clave y umbrales de similitud
+        keywords = ["Descripcion", "Unnamed: 0"]
+        similarity_threshold = 0.8  # Puedes ajustar este valor según tu criterio
+
+        # Encontrar el encabezado más similar a cada palabra clave
+        header_similarity = {}
+        for keyword in keywords:
+            closest_match = difflib.get_close_matches(keyword, tabla.columns, n=1, cutoff=similarity_threshold)
+            if closest_match:
+                header_similarity[keyword] = closest_match[0]
+
+        # Verificar si se encontraron las palabras clave
+        if "Descripcion" in header_similarity and "Unnamed: 0" in header_similarity:
+            # Intercambiar los encabezados de las columnas según la similitud
+            tabla.rename(columns={header_similarity["Descripcion"]: "Temp"}, inplace=True)
+            tabla.rename(columns={header_similarity["Unnamed: 0"]: header_similarity["Descripcion"]}, inplace=True)
+            tabla.rename(columns={"Temp": header_similarity["Unnamed: 0"]}, inplace=True)
+
+            # Verificar si la nueva última columna está compuesta solo de NaN
+            last_column = tabla.columns[-1]
+            if tabla[last_column].isnull().all():
+                # Eliminar la nueva última columna
+                tabla.drop(columns=[last_column], inplace=True)
+    
+    return tabla
+
+print(f"Esta es la tabla modificada \n{clean_unnamed_col(tabla1)}")
+
+
+
+
 
 
 

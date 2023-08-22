@@ -184,11 +184,12 @@ def get_source():
                                 #first_print = pd.DataFrame()
                                 pattern3 = r'^Doc\. N°$|^\d{3}-\d{5}-\d{3}$'
                                 for table in tables:
+                                    #print(table)
                                     a = table
-                                    first_header = a.columns[0]   
+                                    first_header = a.columns[0]
                                     #print(first_print.equals(a))                                     
                                     if (("Doc. N°" in first_header or re.match(pattern3, first_header) or "DOC. N°" in first_header) and first_print.equals(table) == False):
-                                        #agregar otro if table = table.drop("Unnamed: 0", axis=1)
+                                        #agregar otro if table = table.drop("Unnamed: 0", axis=1)   
                                         print(table)
                                         #print(type(table))
                                         first_print = table
