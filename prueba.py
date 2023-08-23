@@ -338,7 +338,7 @@ print(clean_double_row(dfa))
 # modificar si la tabla tiene una columna de mas
 # BIEN
 
-import pandas as pd
+""" import pandas as pd
 import numpy as np
 import difflib
 
@@ -384,7 +384,7 @@ def clean_unnamed_col(tabla):
     
     return tabla
 
-print(f"Esta es la tabla modificada \n{clean_unnamed_col(tabla1)}")
+print(f"Esta es la tabla modificada \n{clean_unnamed_col(tabla1)}") """
 
 
 

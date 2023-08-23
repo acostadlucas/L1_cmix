@@ -11,6 +11,7 @@ from pdf2image import convert_from_path
 import datetime
 import locale
 import pandas as pd
+pd.options.mode.chained_assignment = None
 
 # Crear una nueva ventana utilizando la biblioteca tkinter
 window = tk.Tk()
@@ -118,7 +119,79 @@ def are_tables_equal(table1, table2):
     
     return True
 
+def clean_double_row(df):
+    # Select rows with NaN values in any column
+    nan_rows = df[df.isna().any(axis=1)]
 
+    # Calculate the proportion of non-null values per row
+    def calculate_completeness(row):
+        non_null_count = row.count()
+        total_columns = len(row)
+        completeness = non_null_count / total_columns * 100
+        return completeness
+
+    # Apply the function to each row of the DataFrame
+    nan_rows.loc[:, 'Completeness'] = nan_rows.apply(calculate_completeness, axis=1)
+
+    # Initialize variables
+    combined_rows = []
+    current_combined_row = None
+
+    # Iterate through nan_rows
+    for index, row in nan_rows.iterrows():
+        if current_combined_row is None or row['Completeness'] == 75:
+            if current_combined_row is not None:
+                combined_rows.append(current_combined_row)
+            current_combined_row = row.copy()
+        else:
+            for col in df.columns:
+                if pd.notna(row[col]):
+                    if pd.notna(current_combined_row[col]):
+                        current_combined_row[col] = current_combined_row[col] + ' ' + row[col]
+                    else:
+                        current_combined_row[col] = row[col]
+
+    # Append the last combined row
+    if current_combined_row is not None:
+        combined_rows.append(current_combined_row)
+
+    # Create a DataFrame from the combined rows
+    combined_df = pd.DataFrame(combined_rows)
+
+    while True:
+        new_combined_rows = []
+        current_combined_row = None
+        for index, row in combined_df.iterrows():
+            if current_combined_row is None or row['Completeness'] >= 75:
+                if current_combined_row is not None:
+                    new_combined_rows.append(current_combined_row)
+                current_combined_row = row.copy()
+            else:
+                for col in df.columns:
+                    if pd.notna(row[col]):
+                        if pd.notna(current_combined_row[col]):
+                            current_combined_row[col] = current_combined_row[col] + ' ' + row[col]
+                        else:
+                            current_combined_row[col] = row[col]
+        if current_combined_row is not None:
+            new_combined_rows.append(current_combined_row)
+        if len(new_combined_rows) == len(combined_df):
+            break
+        combined_df = pd.DataFrame(new_combined_rows)
+    combined_df = combined_df.drop(columns=["Completeness"])
+    df = df.dropna()
+    new_df = pd.concat([df, combined_df])
+    
+    return new_df
+
+def first_row_as_data(dataframe):
+    # Crear un nuevo DataFrame usando la primera fila como datos y transponerlo
+    new_dataframe = pd.DataFrame(dataframe.iloc[0]).T
+
+    # Agregar las filas restantes al nuevo DataFrame sin encabezados y reiniciar los índices
+    new_dataframe = pd.concat([new_dataframe, dataframe.iloc[1:]], ignore_index=True)
+
+    return new_dataframe
 
 def get_source():
     global path
@@ -148,7 +221,8 @@ def get_source():
                 print("------------------------------------------------------------------------------------------")
                 print(f"estoy considerando que 1561 esta en {file_name}")
                 # AQUI SE OBTIENE EL NUMERO DE LO DEL RECIBIDO, SU FECHA Y REFERENCIA #
-                if "LO" in file_name:
+                if file_name.startswith("LO"):
+                    #print("ESTA ENTRANDO ACA")
                     # Si el archivo contiene "LO" en su nombre, procesarlo con OCR usando la función process_pdf_with_ocr
                     print(f"Archivo: {file_name} - Procesando con OCR:")
                     print(find_referencia_in_text(process_pdf_with_ocr(pdf_file)))
@@ -156,7 +230,7 @@ def get_source():
                     
                 #poner elif para tomar tablas de los documentos con "OT"
                 else:
-                    if re.search(r"OT", file_name): #and re.search(r"\bNOTA\b(?!\d)", file_name):
+                    if file_name.startswith("OT") or file_name.startswith("NOTA"):
                         # Si el archivo no contiene "LO" en su nombre, obtener y mostrar los datos de las tablas dentro del PDF usando tabula
                         #print(f"Archivo: {pdf_file}")
                         
@@ -166,14 +240,21 @@ def get_source():
                             print("Información de las tablas:")
                             target_tables = []
                             for table in tables:
-                                pattern3 = r'^Doc\. N°$|^\d{3}-\d{5}-\d{3}$'
+                                pattern3 = r'^\d{3}-\d{5}-\d{3}$'
                                 first_header = table.columns[0]
                                 #print(table)
                                 
                                 #print(table.columns[0])
                                 if "Doc. N°" in first_header or re.match(pattern3, first_header) or "DOC. N°" in first_header:
+                                    if re.match(pattern3, first_header):
+                                        print("que paso aca si es que tiene pattern3")
+                                        print(table)
+
                                     #agregar otro if table = table.drop("Unnamed: 0", axis=1)
-                                    print(table)
+                                    else:
+                                        print(" no se esta considerando el  pattern3")
+                                        print(table)
+                                    
                                     target_tables.append(table)
                                     #print(table.columns[0])
                                 #print(f"Tabla {i + 1}:\n{table}\n")
@@ -190,14 +271,19 @@ def get_source():
                                     #print(first_print.equals(a))                                     
                                     if (("Doc. N°" in first_header or re.match(pattern3, first_header) or "DOC. N°" in first_header) and first_print.equals(table) == False):
                                         #agregar otro if table = table.drop("Unnamed: 0", axis=1)   
-                                        print(table)
-                                        #print(type(table))
-                                        first_print = table
+                                        if table.isna().any().any():
+                                            print(f"esta es la tabla original que se rompe por doble fila\n{table}")
+                                            clean_table = clean_double_row(table)
+                                            print(f"esta es la tabla limpia \n{clean_table}")
+                                            #print(type(table))
+                                            first_print = table
+                                        else:
+                                            print(table)
                                         #print(first_print.equals(table))
 
                         except Exception as e:
                             print(f"Error al leer las tablas del archivo {file_name}: {e}")
-                    else:
+                    elif file_name.startswith("1561"):
                         print(f"Archivo: {file_name} - Procesando con OCR:")
                         #print(process_pdf_with_ocr(pdf_file))
                         print(find_referencia_in_text(process_pdf_with_ocr(pdf_file)))
@@ -207,13 +293,24 @@ def get_source():
                             print(len(tables))
                             print("Información de las tablas:")
                             for table in tables:
-                                pattern3 = r'^Doc\. N°$|^\d{3}-\d{5}-\d{3}$'
+                                pattern3 = r'^\d{3}-\d{5}-\d{3}$'
                                 first_header = table.columns[0]
                                 #print(table)
                                 
                                 if "Doc. N°" in first_header or re.match(pattern3, first_header) or "DOC. N°" in first_header:
-                                    table = table.drop("Unnamed: 0", axis=1)
-                                    print(table)
+                                    
+                                    if re.match(pattern3, first_header):
+                                        #PROBLEMON ACA AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA***********************************
+                                        print("ACA")
+                                        table_csv = pd.DataFrame.to_csv(table)
+                                        no_header_table = pd.DataFrame(table_csv, header=None)
+                                        print(no_header_table)
+                                    else:
+                                        print("OOOOOOOO ACA")
+                                        table = table.drop("Unnamed: 0", axis=1)
+                                        print(table)
+                                        
+
                                     #print(table[1])
                                 #print(f"Tabla {i + 1}:\n{table}\n")
                         except Exception as e:
