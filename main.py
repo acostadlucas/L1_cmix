@@ -184,14 +184,37 @@ def clean_double_row(df):
     
     return new_df
 
-def first_row_as_data(dataframe):
-    # Crear un nuevo DataFrame usando la primera fila como datos y transponerlo
-    new_dataframe = pd.DataFrame(dataframe.iloc[0]).T
-
-    # Agregar las filas restantes al nuevo DataFrame sin encabezados y reiniciar los índices
-    new_dataframe = pd.concat([new_dataframe, dataframe.iloc[1:]], ignore_index=True)
-
-    return new_dataframe
+def change_headers(df):
+    # Guardar los headers originales del dataframe
+    original_headers = df.columns.tolist()
+    #print(f"estos son los valores originales en el header:\n{original_headers}")
+    
+    # Verificar el número de columnas del dataframe
+    num_columns = len(df.columns)
+    
+    # Crear una nueva fila con los valores originales
+    original_values = df.values.tolist()
+    original_values.append(original_headers)  # Usamos append() en lugar de extend()
+    #print(original_values)
+    
+    # Crear un nuevo dataframe con los valores originales en una nueva fila
+    new_df = pd.DataFrame([original_values[0]], columns=original_headers)
+    #print(f"y esto tb quiero ver:\n{new_df}")
+    
+    # Reemplazar los headers del dataframe según el número de columnas
+    if num_columns == 5:
+        new_headers = ['Doc. N°', 'Tipo', 'Rev.', 'Descripcion', 'Situacion']
+    elif num_columns == 4:
+        new_headers = ['Doc. N°', 'Tipo', 'Rev.', 'Descripcion']
+    else:
+        raise ValueError("El dataframe debe tener más 4 o 5 columnas")
+    
+    new_df.columns = new_headers
+    
+    # Agregar el resto de filas al nuevo dataframe
+    new_df = pd.concat([new_df, pd.DataFrame(original_values[1:], columns=new_headers)], ignore_index=True)
+    
+    return new_df
 
 def get_source():
     global path
@@ -300,11 +323,9 @@ def get_source():
                                 if "Doc. N°" in first_header or re.match(pattern3, first_header) or "DOC. N°" in first_header:
                                     
                                     if re.match(pattern3, first_header):
-                                        #PROBLEMON ACA AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA***********************************
-                                        print("ACA")
-                                        table_csv = pd.DataFrame.to_csv(table)
-                                        no_header_table = pd.DataFrame(table_csv, header=None)
-                                        print(no_header_table)
+                                        print("aca")
+                                        table = table.drop("Unnamed: 0", axis=1)
+                                        print(change_headers(table))
                                     else:
                                         print("OOOOOOOO ACA")
                                         table = table.drop("Unnamed: 0", axis=1)
