@@ -11,23 +11,21 @@ from pdf2image import convert_from_path
 import datetime
 import locale
 import pandas as pd
+import time
 pd.options.mode.chained_assignment = None
 
-# Crear una nueva ventana utilizando la biblioteca tkinter
-window = tk.Tk()
-window.title("L1")
-window.iconbitmap(default="icons8-compare-50.ico")
-window.minsize(width=650, height=600)
 
-# Crear un lienzo en la ventana para mostrar una imagen
-canvas = tk.Canvas(width=150, height=200)
-img = tk.PhotoImage(file="L1_cmix.png")
-img = img.subsample(8, 8)
-canvas.create_image(75, 100, image=img)
-canvas.pack()
-
-# Función para procesar el archivo PDF con Tesseract OCR
 def process_pdf_with_ocr(pdf_file):
+    """
+    Procesa un archivo PDF utilizando OCR (Optical Character Recognition) para extraer texto de imágenes.
+
+    Parameters:
+        pdf_file (str): La ruta al archivo PDF a procesar.
+
+    Returns:
+        list: Una lista de textos extraídos de las imágenes en el PDF.
+              Si ocurre un error durante el procesamiento, devuelve None.
+    """
     try:
         # Convertir el PDF a imágenes usando pdf2image
         pages = convert_from_path(pdf_file)
@@ -56,7 +54,16 @@ def process_pdf_with_ocr(pdf_file):
         print(f"Error al procesar el archivo {pdf_file} con OCR: {e}")
         return None
 
-def convert_fecha_format(fecha_str):
+def convert_date_format(fecha_str):
+    """
+    Convierte una fecha en formato "dd de mes de yyyy" a formato "dd/mm/yyyy".
+
+    Parameters:
+        fecha_str (str): La fecha en formato "dd de mes de yyyy".
+
+    Returns:
+        str: La fecha convertida en formato "dd/mm/yyyy".
+    """
     # Establecer el idioma español para el formato de fecha
     locale.setlocale(locale.LC_TIME, 'es_ES')
 
@@ -69,28 +76,38 @@ def convert_fecha_format(fecha_str):
     return fecha_formato_deseado
 
 def find_referencia_in_text(text_list):
-    # Expresión regular para buscar el texto entre "REFERENCIA:" y la primera doble línea "\n\n"
+    """
+    Busca referencias en una lista de texto utilizando patrones de expresión regular.
+
+    Parameters:
+        text_list (list of str): La lista de texto en la que se buscarán las referencias.
+
+    Returns:
+        list of str: Una lista de referencias encontradas en el texto.
+    """
+    # Patrones de expresión regular para buscar referencias
     pattern0 = r'N°\s+(\d{4}-\d{1}-\d{3})' 
     pattern2 = r'REFERENCIA:(.*?)(?:\n\n|$)' 
     pattern3 = r'(\d{4}-\d{1}-\d{3})'
     pattern1 = r'(\d{1,2}\s+de\s+\w+\s+de\s+\d{4})'
     count_ref = 0
     
-    the_patterns =[pattern0, pattern1, pattern2]
+    the_patterns = [pattern0, pattern1, pattern2]
+    
     # Lista para almacenar las referencias encontradas
     referencia_list = []
 
-    # Buscar el patrón en el único texto de la lista
+    # Buscar el patrón en el texto de la lista
     for text in text_list:
         for pa in the_patterns:   
             matches = re.findall(pa, text, re.DOTALL)
             referencia_list.extend(matches)
 
-    # Procesar el texto para eliminar las líneas adicionales "\n"
+    # Procesar el texto para eliminar líneas adicionales y espacios en blanco
     processed_referencias = []
     for referencia in referencia_list:
         if re.match(pattern1, referencia):
-            referencia = convert_fecha_format(referencia)
+            referencia = convert_date_format(referencia)
             processed_referencia = re.sub(r'\n', ' ', referencia)
             processed_referencia = re.sub(r'\s{2,}', ' ', referencia)
             processed_referencias.append(processed_referencia.strip())
@@ -104,14 +121,25 @@ def find_referencia_in_text(text_list):
         if re.match(pattern3, ref) and count_ref == 1:
             processed_referencias.remove(ref)
         count_ref += 1
-        
     
-    return(processed_referencias)
+    return processed_referencias
 
 def are_tables_equal(table1, table2):
+    """
+    Compara dos tablas (listas de listas) para verificar si son iguales.
+
+    Parameters:
+        table1 (list of list): La primera tabla a comparar.
+        table2 (list of list): La segunda tabla a comparar.
+
+    Returns:
+        bool: True si las tablas son iguales, False en caso contrario.
+    """
+    # Comprobar si las tablas tienen el mismo número de filas y columnas
     if len(table1) != len(table2) or len(table1[0]) != len(table2[0]):
         return False
     
+    # Iterar a través de las filas y columnas de las tablas para comparar los valores
     for i in range(len(table1)):
         for j in range(len(table1[0])):
             if table1[i][j] != table2[i][j]:
@@ -120,24 +148,33 @@ def are_tables_equal(table1, table2):
     return True
 
 def clean_double_row(df):
-    # Select rows with NaN values in any column
+    """
+    Limpia las filas duplicadas en un DataFrame al combinar valores de celdas con NaN.
+    
+    Parameters:
+        df (DataFrame): El DataFrame a limpiar.
+        
+    Returns:
+        DataFrame: El DataFrame limpiado con valores de celdas NaN combinados.
+    """
+    # Seleccionar filas con valores NaN en cualquier columna
     nan_rows = df[df.isna().any(axis=1)]
 
-    # Calculate the proportion of non-null values per row
+    # Calcular la proporción de valores no nulos por fila
     def calculate_completeness(row):
         non_null_count = row.count()
         total_columns = len(row)
         completeness = non_null_count / total_columns * 100
         return completeness
 
-    # Apply the function to each row of the DataFrame
+    # Aplicar la función a cada fila del DataFrame
     nan_rows.loc[:, 'Completeness'] = nan_rows.apply(calculate_completeness, axis=1)
 
-    # Initialize variables
+    # Inicializar variables
     combined_rows = []
     current_combined_row = None
 
-    # Iterate through nan_rows
+    # Iterar a través de las filas con valores NaN
     for index, row in nan_rows.iterrows():
         if current_combined_row is None or row['Completeness'] == 75:
             if current_combined_row is not None:
@@ -151,11 +188,11 @@ def clean_double_row(df):
                     else:
                         current_combined_row[col] = row[col]
 
-    # Append the last combined row
+    # Agregar la última fila combinada
     if current_combined_row is not None:
         combined_rows.append(current_combined_row)
 
-    # Create a DataFrame from the combined rows
+    # Crear un DataFrame a partir de las filas combinadas
     combined_df = pd.DataFrame(combined_rows)
 
     while True:
@@ -185,21 +222,27 @@ def clean_double_row(df):
     return new_df
 
 def change_headers(df):
+    """
+    Transforma un dataframe reemplazando los headers y agregando una nueva fila con los valores originales.
+    
+    Parameters:
+        df (DataFrame): El dataframe a transformar.
+        
+    Returns:
+        DataFrame: El dataframe transformado con nuevos headers y una fila con valores originales.
+    """
     # Guardar los headers originales del dataframe
     original_headers = df.columns.tolist()
-    #print(f"estos son los valores originales en el header:\n{original_headers}")
     
     # Verificar el número de columnas del dataframe
     num_columns = len(df.columns)
     
     # Crear una nueva fila con los valores originales
     original_values = df.values.tolist()
-    original_values.append(original_headers)  # Usamos append() en lugar de extend()
-    #print(original_values)
+    original_values.append(original_headers)
     
     # Crear un nuevo dataframe con los valores originales en una nueva fila
     new_df = pd.DataFrame([original_values[0]], columns=original_headers)
-    #print(f"y esto tb quiero ver:\n{new_df}")
     
     # Reemplazar los headers del dataframe según el número de columnas
     if num_columns == 5:
@@ -216,130 +259,210 @@ def change_headers(df):
     
     return new_df
 
+def get_folder_names(path):
+    """
+    Obtiene una lista de nombres de carpetas dentro del directorio especificado.
+    
+    Parameters:
+        path (str): Ruta del directorio a explorar.
+    
+    Returns:
+        list: Lista de nombres de las carpetas dentro del directorio.
+    """
+    folder_names = [name for name in os.listdir(path) if os.path.isdir(os.path.join(path, name))]
+    return folder_names
+
+def process_pdf_tables(pdf_file):
+    """
+    Procesa las tablas de un archivo PDF utilizando la biblioteca Tabula.
+
+    Parameters:
+        pdf_file (str): La ruta al archivo PDF a procesar.
+
+    Returns:
+        None
+    """
+    try:
+        # Leer todas las páginas del PDF y extraer las tablas
+        tables = tabula.read_pdf(pdf_file, pages='all', encoding='latin-1', lattice=False)
+
+        # Patrón para identificar números de documento y encabezados de tablas
+        pattern3 = r'^Doc\. N°$|^\d{3}-\d{5}-\d{3}$'
+
+        # Variable para almacenar la primera tabla para comparar
+        first_print = pd.DataFrame()
+
+        for table in tables:
+            a = table
+            first_header = a.columns[0]
+
+            # Verificar si la tabla es diferente a la anterior y cumple con los patrones
+            if (("Doc. N°" in first_header or re.match(pattern3, first_header) or "DOC. N°" in first_header) and not first_print.equals(table)):
+                # Verificar si la tabla tiene celdas vacías
+                if table.isna().any().any():
+                    print(f"Tabla original con filas duplicadas:\n{table}")
+                    clean_table = clean_double_row(table)  # Usar tu función clean_double_row
+                    print(f"Tabla limpia:\n{clean_table}")
+                    first_print = table
+                else:
+                    print(table)
+
+    except Exception as e:
+        print(f"Error al procesar el archivo {pdf_file} con Tabula: {e}")
+
+def process_pdf_tables1(pdf_file):
+    """
+    Procesa las tablas de un archivo PDF utilizando la biblioteca Tabula y maneja los encabezados.
+
+    Parameters:
+        pdf_file (str): La ruta al archivo PDF a procesar.
+
+    Returns:
+        None
+    """
+    try:
+        # Leer todas las páginas del PDF y extraer las tablas
+        tables = tabula.read_pdf(pdf_file, pages='all', encoding='latin-1', lattice=True)
+        print(f"Número de tablas encontradas: {len(tables)}")
+        print("Información de las tablas:")
+        
+        for table in tables:
+            pattern3 = r'^\d{3}-\d{5}-\d{3}$'
+            first_header = table.columns[0]
+            
+            # Verificar si el encabezado cumple con los patrones
+            if "Doc. N°" in first_header or re.match(pattern3, first_header) or "DOC. N°" in first_header:
+                if re.match(pattern3, first_header):
+                    print("Procesando con cambio de encabezados:")
+                    table = table.drop("Unnamed: 0", axis=1)
+                    print(change_headers(table))  # Usar tu función change_headers
+                else:
+                    print("Procesando sin cambio de encabezados:")
+                    table = table.drop("Unnamed: 0", axis=1)
+                    print(table)
+    except Exception as e:
+        print(f"Error al procesar el archivo {pdf_file} con Tabula: {e}")
+
+def process_pdf_tables2(pdf_file):
+    """
+    Procesa las tablas de un archivo PDF utilizando la biblioteca Tabula y maneja los encabezados.
+
+    Parameters:
+        pdf_file (str): La ruta al archivo PDF a procesar.
+
+    Returns:
+        None
+    """
+    try:
+        # Leer todas las páginas del PDF y extraer las tablas
+        tables = tabula.read_pdf(pdf_file, pages='all', encoding='latin-1', lattice=True)
+        print(f"Número de tablas encontradas: {len(tables)}")
+        print("Información de las tablas:")
+        target_tables = []
+        
+        for table in tables:
+            pattern3 = r'^\d{3}-\d{5}-\d{3}$'
+            first_header = table.columns[0]
+            
+            # Verificar si el encabezado cumple con los patrones
+            if "Doc. N°" in first_header or re.match(pattern3, first_header) or "DOC. N°" in first_header:
+                if re.match(pattern3, first_header):
+                    print("Procesando con pattern3:")
+                    print(table)
+                else:
+                    print("Procesando sin pattern3:")
+                    print(table)
+                
+                target_tables.append(table)
+        
+        if len(target_tables) == 0:
+            print("Utilizando 'lattice=True' se rompe todo, entonces uso 'lattice=False'")
+            process_pdf_tables(pdf_file)  # Llamar a tu función original
+    except Exception as e:
+        print(f"Error al procesar el archivo {pdf_file} con Tabula: {e}")
+
+def start():
+    # utiliza funcion para una lista con los nombres de las carpetas en el path seleccionado
+    start_time = time.time()  # Marca el tiempo de inicio
+    if selected_directory:
+        folder_names = get_folder_names(selected_directory)
+    
+        # Iterar a través de las carpetas y buscar todos los archivos PDF 
+        for folder_name in folder_names:
+            folder_path = os.path.join(selected_directory, folder_name)
+            pdf_files = glob.glob(os.path.join(folder_path, "*.pdf"))
+
+            # iterea a traves de cada archivo pdf y realiza ciertas taraea con c/u
+            for pdf_file in pdf_files:
+                file_name = os.path.basename(pdf_file)
+                
+                # toma los archivos que contengan el numero 1561 en su nombre y no tengan LOP
+                if re.search(r"1561", file_name) and "LOP" not in file_name:
+                    print("------------------------------------------------------------------------------------------")
+                    print(f"estoy considerando que 1561 esta en {file_name}")
+                    
+                    # trabaja sobre el archivo con LO en su nombre #
+                    if file_name.startswith("LO"):
+                        #print("---Proceso A---")                    
+                        print(f"Archivo: {file_name} - Procesando con OCR:")
+                        print(find_referencia_in_text(process_pdf_with_ocr(pdf_file)))                   
+                        
+                    
+                    else:
+                        if file_name.startswith("OT") or file_name.startswith("NOTA"):
+                            # Si el archivo no contiene "LO" en su nombre, obtener y mostrar los datos de las tablas dentro del PDF usando tabula
+                                                    
+                            try:
+                                process_pdf_tables2(pdf_file)
+
+                            except Exception as e:
+                                print(f"Error al leer las tablas del archivo {file_name}: {e}")
+                    
+                        elif file_name.startswith("1561"):
+                            print(f"Archivo: {file_name} - Procesando con OCR:")
+                            #print(process_pdf_with_ocr(pdf_file))
+                            print(find_referencia_in_text(process_pdf_with_ocr(pdf_file)))
+                            
+                            try:
+                                process_pdf_tables1(pdf_file)
+
+                            except Exception as e:
+                                print(f"Error al leer las tablas del archivo {file_name}: {e}")
+    else:
+        print("Ningún directorio seleccionado")
+    
+    end_time = time.time()  # Marca el tiempo de finalización
+    elapsed_time = end_time - start_time
+    print("Tiempo transcurrido:", elapsed_time, "segundos")
+
 def get_source():
-    global path
-    path = p.Path(askdirectory())
-    text = tk.Label(text=path)
+    global selected_directory  # Accede a la variable global
+    selected_directory = askdirectory()
+    text = tk.Label(text=selected_directory)
     text.pack()
 
-    # Obtener una lista de nombres de carpetas dentro del directorio seleccionado
-    folder_names = [name for name in os.listdir(path) if os.path.isdir(os.path.join(path, name))]
-    print("Lista de nombres de carpetas dentro del directorio:")
-    print(folder_names)
-    first_print = pd.DataFrame()
 
-    # Iterar a través de las carpetas y buscar archivos PDF que cumplan con ciertas condiciones
-    for folder_name in folder_names:
-        folder_path = os.path.join(path, folder_name)
-        pdf_files = glob.glob(os.path.join(folder_path, "*.pdf"))
+# Crear una nueva ventana utilizando la biblioteca tkinter
+window = tk.Tk()
+window.title("L1")
+window.iconbitmap(default="icons8-compare-50.ico")
+window.minsize(width=650, height=600)
 
-        # Filtrar archivos PDF por nombre utilizando expresiones regulares y otras condiciones
-        #print(f"\nEncontrados los siguientes archivos PDF en '{folder_name}' con el número '1561':")
-        #print(pdf_files)
-        
-        for pdf_file in pdf_files:
-            file_name = os.path.basename(pdf_file)
-            
-            if re.search(r"1561", file_name) and "LOP" not in file_name:
-                print("------------------------------------------------------------------------------------------")
-                print(f"estoy considerando que 1561 esta en {file_name}")
-                # AQUI SE OBTIENE EL NUMERO DE LO DEL RECIBIDO, SU FECHA Y REFERENCIA #
-                if file_name.startswith("LO"):
-                    #print("ESTA ENTRANDO ACA")
-                    # Si el archivo contiene "LO" en su nombre, procesarlo con OCR usando la función process_pdf_with_ocr
-                    print(f"Archivo: {file_name} - Procesando con OCR:")
-                    print(find_referencia_in_text(process_pdf_with_ocr(pdf_file)))
-                    #print(process_pdf_with_ocr(pdf_file))
-                    
-                #poner elif para tomar tablas de los documentos con "OT"
-                else:
-                    if file_name.startswith("OT") or file_name.startswith("NOTA"):
-                        # Si el archivo no contiene "LO" en su nombre, obtener y mostrar los datos de las tablas dentro del PDF usando tabula
-                        #print(f"Archivo: {pdf_file}")
-                        
-                        try:
-                            tables = tabula.read_pdf(pdf_file, pages='all', encoding='latin-1', lattice=True)
-                            print(len(tables))
-                            print("Información de las tablas:")
-                            target_tables = []
-                            for table in tables:
-                                pattern3 = r'^\d{3}-\d{5}-\d{3}$'
-                                first_header = table.columns[0]
-                                #print(table)
-                                
-                                #print(table.columns[0])
-                                if "Doc. N°" in first_header or re.match(pattern3, first_header) or "DOC. N°" in first_header:
-                                    if re.match(pattern3, first_header):
-                                        print("que paso aca si es que tiene pattern3")
-                                        print(table)
+# Crear un lienzo en la ventana para mostrar una imagen
+canvas = tk.Canvas(width=150, height=200)
+img = tk.PhotoImage(file="L1_cmix.png")
+img = img.subsample(8, 8)
+canvas.create_image(75, 100, image=img)
+canvas.pack()
 
-                                    #agregar otro if table = table.drop("Unnamed: 0", axis=1)
-                                    else:
-                                        print(" no se esta considerando el  pattern3")
-                                        print(table)
-                                    
-                                    target_tables.append(table)
-                                    #print(table.columns[0])
-                                #print(f"Tabla {i + 1}:\n{table}\n")
-                                
-                            if len(target_tables) == 0:
-                                print("Utilizando 'lattice=True' se rompe todo entonces uso 'lattice=False'")
-                                tables = tabula.read_pdf(pdf_file, pages='all', encoding='latin-1', lattice=False)
-                                #first_print = pd.DataFrame()
-                                pattern3 = r'^Doc\. N°$|^\d{3}-\d{5}-\d{3}$'
-                                for table in tables:
-                                    #print(table)
-                                    a = table
-                                    first_header = a.columns[0]
-                                    #print(first_print.equals(a))                                     
-                                    if (("Doc. N°" in first_header or re.match(pattern3, first_header) or "DOC. N°" in first_header) and first_print.equals(table) == False):
-                                        #agregar otro if table = table.drop("Unnamed: 0", axis=1)   
-                                        if table.isna().any().any():
-                                            print(f"esta es la tabla original que se rompe por doble fila\n{table}")
-                                            clean_table = clean_double_row(table)
-                                            print(f"esta es la tabla limpia \n{clean_table}")
-                                            #print(type(table))
-                                            first_print = table
-                                        else:
-                                            print(table)
-                                        #print(first_print.equals(table))
-
-                        except Exception as e:
-                            print(f"Error al leer las tablas del archivo {file_name}: {e}")
-                    elif file_name.startswith("1561"):
-                        print(f"Archivo: {file_name} - Procesando con OCR:")
-                        #print(process_pdf_with_ocr(pdf_file))
-                        print(find_referencia_in_text(process_pdf_with_ocr(pdf_file)))
-                        
-                        try:
-                            tables = tabula.read_pdf(pdf_file, pages='all', encoding='latin-1', lattice=True)
-                            print(len(tables))
-                            print("Información de las tablas:")
-                            for table in tables:
-                                pattern3 = r'^\d{3}-\d{5}-\d{3}$'
-                                first_header = table.columns[0]
-                                #print(table)
-                                
-                                if "Doc. N°" in first_header or re.match(pattern3, first_header) or "DOC. N°" in first_header:
-                                    
-                                    if re.match(pattern3, first_header):
-                                        print("aca")
-                                        table = table.drop("Unnamed: 0", axis=1)
-                                        print(change_headers(table))
-                                    else:
-                                        print("OOOOOOOO ACA")
-                                        table = table.drop("Unnamed: 0", axis=1)
-                                        print(table)
-                                        
-
-                                    #print(table[1])
-                                #print(f"Tabla {i + 1}:\n{table}\n")
-                        except Exception as e:
-                            print(f"Error al leer las tablas del archivo {file_name}: {e}")
 
 # Crear un botón en la ventana para seleccionar el directorio
-button = tk.Button(text="Source 📁", command=get_source)
-button.pack()
+button1 = tk.Button(text="Source 📁", command=get_source)
+button1.pack()
+
+button2 = tk.Button(text="Start", command=start)
+button2.pack()
+
 
 # Iniciar el bucle principal de la ventana
 window.mainloop()
