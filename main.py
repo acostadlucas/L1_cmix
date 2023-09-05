@@ -280,7 +280,7 @@ def process_pdf_tables(pdf_file):
         pdf_file (str): La ruta al archivo PDF a procesar.
 
     Returns:
-        None
+        list: Lista de tablas objetivos ya limpias.
     """
     try:
         # Leer todas las páginas del PDF y extraer las tablas
@@ -291,10 +291,12 @@ def process_pdf_tables(pdf_file):
 
         # Variable para almacenar la primera tabla para comparar
         first_print = pd.DataFrame()
+        targets_tables = []
 
         for table in tables:
             a = table
             first_header = a.columns[0]
+            
 
             # Verificar si la tabla es diferente a la anterior y cumple con los patrones
             if (("Doc. N°" in first_header or re.match(pattern3, first_header) or "DOC. N°" in first_header) and not first_print.equals(table)):
@@ -304,8 +306,12 @@ def process_pdf_tables(pdf_file):
                     clean_table = clean_double_row(table)  # Usar tu función clean_double_row
                     print(f"Tabla limpia:\n{clean_table}")
                     first_print = table
+                    targets_tables.append(clean_table)
                 else:
                     print(table)
+                    targets_tables.append(table)
+        
+        return targets_tables
 
     except Exception as e:
         print(f"Error al procesar el archivo {pdf_file} con Tabula: {e}")
@@ -318,13 +324,14 @@ def process_pdf_tables1(pdf_file):
         pdf_file (str): La ruta al archivo PDF a procesar.
 
     Returns:
-        None
+        list: Lista de tablas objetivos ya limpias.
     """
     try:
         # Leer todas las páginas del PDF y extraer las tablas
         tables = tabula.read_pdf(pdf_file, pages='all', encoding='latin-1', lattice=True)
         print(f"Número de tablas encontradas: {len(tables)}")
         print("Información de las tablas:")
+        targets_tables = []
         
         for table in tables:
             pattern3 = r'^\d{3}-\d{5}-\d{3}$'
@@ -335,11 +342,15 @@ def process_pdf_tables1(pdf_file):
                 if re.match(pattern3, first_header):
                     print("Procesando con cambio de encabezados:")
                     table = table.drop("Unnamed: 0", axis=1)
-                    print(change_headers(table))  # Usar tu función change_headers
+                    table = change_headers(table) 
+                    print(table)  
+                    targets_tables.append(table)
                 else:
                     print("Procesando sin cambio de encabezados:")
                     table = table.drop("Unnamed: 0", axis=1)
                     print(table)
+                    targets_tables.append(table)
+        return targets_tables
     except Exception as e:
         print(f"Error al procesar el archivo {pdf_file} con Tabula: {e}")
 
@@ -351,7 +362,7 @@ def process_pdf_tables2(pdf_file):
         pdf_file (str): La ruta al archivo PDF a procesar.
 
     Returns:
-        None
+        list: Lista de tablas objetivos ya limpias.
     """
     try:
         # Leer todas las páginas del PDF y extraer las tablas
@@ -369,15 +380,16 @@ def process_pdf_tables2(pdf_file):
                 if re.match(pattern3, first_header):
                     print("Procesando con pattern3:")
                     print(table)
+                    target_tables.append(table)
                 else:
                     print("Procesando sin pattern3:")
                     print(table)
-                
-                target_tables.append(table)
-        
+                    target_tables.append(table)
+                              
         if len(target_tables) == 0:
             print("Utilizando 'lattice=True' se rompe todo, entonces uso 'lattice=False'")
-            process_pdf_tables(pdf_file)  # Llamar a tu función original
+            target_tables = process_pdf_tables(pdf_file)  # Llamar a tu función original
+        return target_tables
     except Exception as e:
         print(f"Error al procesar el archivo {pdf_file} con Tabula: {e}")
 
