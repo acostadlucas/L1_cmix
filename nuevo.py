@@ -18,7 +18,7 @@ print(primer_header)
  """
 
  #####################################################
-
+""" 
 import pandas as pd
 
 def transform_dataframe(df):
@@ -63,5 +63,65 @@ data = {
 
 df = pd.DataFrame(data)
 new_df = transform_dataframe(df)
-print(new_df)
+print(new_df) """
 
+#########################################################################################
+import tabula
+import difflib
+import pandas as pd
+
+data = {
+    'Col1': ["M-2000-36140-001", "PL", "-", "PL"],
+    'Col2': ["PL", "-", "PL", "PL"],
+    'Col3': ["00", "-", "PL", "PL"],
+    'Col4': ["Puesta tierra en suelo Rocoso", "Protocolos de resistividad - Seccionamiento LT", "PL", "VHA"],
+    'SITUACION': ["APROBADO", "Aprobado Con\rLimitación", "NO APROBADO", "VISTO"]
+    
+}
+
+df = pd.DataFrame(data)
+
+tables = [df]
+
+
+def transformar_situacion(tablas, umbral_similitud=0.843):
+    """
+    Aplica un algoritmo de transformación a las tablas proporcionadas.
+
+    Esta función toma una lista de DataFrames y realiza las siguientes transformaciones en la quinta columna de cada tabla:
+    - Si el valor se asemeja a "aprobado" en un cierto umbral, se reemplaza por "(A)".
+    - Si el valor se asemeja a "no aprobado" en un cierto umbral, se reemplaza por "(NA)".
+    - Si el valor se asemeja a "aprobado con limitacion" en un cierto umbral, se reemplaza por "(ACL)".
+    - Si no cumple con las restricciones anteriores, se encierra en paréntesis.
+
+    :param tablas: Una lista de DataFrames, donde cada DataFrame representa una tabla con al menos cinco columnas.
+    :param umbral_similitud: El umbral de similitud para considerar la similitud entre cadenas (por defecto, 0.843).
+    :return: Una lista de DataFrames modificados.
+    """
+    def transformar_valor(valor):
+        if valor and isinstance(valor, str):
+            valor = valor.lower()
+            if difflib.SequenceMatcher(None, valor, "aprobado").ratio() >= umbral_similitud:
+                return "(A)"
+            elif difflib.SequenceMatcher(None, valor, "no aprobado").ratio() >= umbral_similitud:
+                return "(NA)"
+            elif difflib.SequenceMatcher(None, valor, "aprobado con limitacion").ratio() >= umbral_similitud:
+                return "(ACL)"
+            else:
+                return f"({valor.upper()})"
+        return valor
+
+    tablas_modificadas = []
+    for tabla in tablas:
+        print(f"Esta es la tabla sin cambiar su situacion \n{tabla}")
+        if tabla.shape[1] == 5:
+            quinta_columna = tabla.iloc[:, 4]
+            for i, valor in enumerate(quinta_columna):
+                nuevo_valor = transformar_valor(valor)
+                quinta_columna[i] = nuevo_valor
+            tablas_modificadas.append(tabla)
+        print(f"Esta es la tabla cambiando su situacion \n{tabla}")
+    return tablas_modificadas
+
+
+transformar_situacion(tables)

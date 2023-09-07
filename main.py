@@ -12,6 +12,7 @@ import datetime
 import locale
 import pandas as pd
 import time
+import difflib
 pd.options.mode.chained_assignment = None
 
 
@@ -393,10 +394,49 @@ def process_pdf_tables2(pdf_file):
     except Exception as e:
         print(f"Error al procesar el archivo {pdf_file} con Tabula: {e}")
 
+def transform_situation(tablas, umbral_similitud=0.843):
+    """
+    Aplica un algoritmo de transformación a las tablas proporcionadas.
+
+    Esta función toma una lista de DataFrames y realiza las siguientes transformaciones en la quinta columna de cada tabla:
+    - Si el valor se asemeja a "aprobado" en un cierto umbral, se reemplaza por "(A)".
+    - Si el valor se asemeja a "no aprobado" en un cierto umbral, se reemplaza por "(NA)".
+    - Si el valor se asemeja a "aprobado con limitacion" en un cierto umbral, se reemplaza por "(ACL)".
+    - Si no cumple con las restricciones anteriores, se encierra en paréntesis.
+
+    :param tablas: Una lista de DataFrames, donde cada DataFrame representa una tabla con al menos cinco columnas.
+    :param umbral_similitud: El umbral de similitud para considerar la similitud entre cadenas (por defecto, 0.843).
+    :return: Una lista de DataFrames modificados.
+    """
+    def transformar_valor(valor):
+        if valor and isinstance(valor, str):
+            valor = valor.lower()
+            if difflib.SequenceMatcher(None, valor, "aprobado").ratio() >= umbral_similitud:
+                return "(A)"
+            elif difflib.SequenceMatcher(None, valor, "no aprobado").ratio() >= umbral_similitud:
+                return "(NA)"
+            elif difflib.SequenceMatcher(None, valor, "aprobado con limitacion").ratio() >= umbral_similitud:
+                return "(ACL)"
+            else:
+                return f"({valor.upper()})"
+        return valor
+
+    tablas_modificadas = []
+    for tabla in tablas:
+        print(f"Esta es la tabla sin cambiar su situacion \n{tabla}")
+        if tabla.shape[1] == 5:
+            quinta_columna = tabla.iloc[:, 4]
+            for i, valor in enumerate(quinta_columna):
+                nuevo_valor = transformar_valor(valor)
+                quinta_columna[i] = nuevo_valor
+            tablas_modificadas.append(tabla)
+        print(f"Esta es la tabla cambiando su situacion \n{tabla}")
+    return tablas_modificadas
+
 def start():
     # utiliza funcion para una lista con los nombres de las carpetas en el path seleccionado
     start_time = time.time()  # Marca el tiempo de inicio
-    if selected_directory:
+    try:
         folder_names = get_folder_names(selected_directory)
     
         # Iterar a través de las carpetas y buscar todos los archivos PDF 
@@ -425,10 +465,10 @@ def start():
                             # Si el archivo no contiene "LO" en su nombre, obtener y mostrar los datos de las tablas dentro del PDF usando tabula
                                                     
                             try:
-                                process_pdf_tables2(pdf_file)
+                               target_tables = process_pdf_tables2(pdf_file)
 
                             except Exception as e:
-                                print(f"Error al leer las tablas del archivo {file_name}: {e}")
+                                print(f"Error al leer las tablas del archivo en la seccion A {file_name}: {e}")
                     
                         elif file_name.startswith("1561"):
                             print(f"Archivo: {file_name} - Procesando con OCR:")
@@ -436,11 +476,11 @@ def start():
                             print(find_referencia_in_text(process_pdf_with_ocr(pdf_file)))
                             
                             try:
-                                process_pdf_tables1(pdf_file)
+                                target_tables = process_pdf_tables1(pdf_file)
 
                             except Exception as e:
-                                print(f"Error al leer las tablas del archivo {file_name}: {e}")
-    else:
+                                print(f"Error al leer las tablas del archivo en la seccion B {file_name}: {e}")
+    except Exception as e:
         print("Ningún directorio seleccionado")
     
     end_time = time.time()  # Marca el tiempo de finalización
