@@ -423,14 +423,15 @@ def transform_situation(tablas, umbral_similitud=0.843):
 
     tablas_modificadas = []
     for tabla in tablas:
-        print(f"Esta es la tabla sin cambiar su situacion \n{tabla}")
+        
         if tabla.shape[1] == 5:
+            print(f"Se procedera a cambiar esta tabla en su serie 'Situacion'")
             quinta_columna = tabla.iloc[:, 4]
             for i, valor in enumerate(quinta_columna):
                 nuevo_valor = transformar_valor(valor)
                 quinta_columna[i] = nuevo_valor
             tablas_modificadas.append(tabla)
-        print(f"Esta es la tabla cambiando su situacion \n{tabla}")
+            print(f"Esta es la tabla cambiando su situacion \n{tabla}")
     return tablas_modificadas
 
 def start():
@@ -448,12 +449,12 @@ def start():
             for pdf_file in pdf_files:
                 file_name = os.path.basename(pdf_file)
                 
-                # toma los archivos que contengan el numero 1561 en su nombre y no tengan LOP
+                # toma todos los archivos con 1561, los objetivos son LO recibidos y respuestas asi como NOTAS
                 if re.search(r"1561", file_name) and "LOP" not in file_name:
                     print("------------------------------------------------------------------------------------------")
                     print(f"estoy considerando que 1561 esta en {file_name}")
                     
-                    # trabaja sobre el archivo con LO en su nombre #
+                    # aqui entra el LO de recibidos 
                     if file_name.startswith("LO"):
                         #print("---Proceso A---")                    
                         print(f"Archivo: {file_name} - Procesando con OCR:")
@@ -461,15 +462,18 @@ def start():
                         
                     
                     else:
+                        #aca entra la nota ya sea de LT o SE
                         if file_name.startswith("OT") or file_name.startswith("NOTA"):
                             # Si el archivo no contiene "LO" en su nombre, obtener y mostrar los datos de las tablas dentro del PDF usando tabula
                                                     
                             try:
                                target_tables = process_pdf_tables2(pdf_file)
+                               transform_situation(target_tables)
 
                             except Exception as e:
                                 print(f"Error al leer las tablas del archivo en la seccion A {file_name}: {e}")
-                    
+
+                        # aca entra el LO de respuesta
                         elif file_name.startswith("1561"):
                             print(f"Archivo: {file_name} - Procesando con OCR:")
                             #print(process_pdf_with_ocr(pdf_file))
@@ -477,6 +481,7 @@ def start():
                             
                             try:
                                 target_tables = process_pdf_tables1(pdf_file)
+                                transform_situation(target_tables)
 
                             except Exception as e:
                                 print(f"Error al leer las tablas del archivo en la seccion B {file_name}: {e}")
