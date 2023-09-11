@@ -247,7 +247,7 @@ def change_headers(df):
     
     # Reemplazar los headers del dataframe según el número de columnas
     if num_columns == 5:
-        new_headers = ['Doc. N°', 'Tipo', 'Rev.', 'Descripcion', 'Situacion']
+        new_headers = ['Doc. N°', 'Tipo', 'Rev.', 'Descripción', 'Situación']
     elif num_columns == 4:
         new_headers = ['Doc. N°', 'Tipo', 'Rev.', 'Descripcion']
     else:
@@ -307,8 +307,16 @@ def process_pdf_tables(pdf_file):
                     clean_table = clean_double_row(table)  # Usar tu función clean_double_row
                     print(f"Tabla limpia:\n{clean_table}")
                     first_print = table
+                    try:
+                        clean_table.rename(columns={'DOC. N°': 'Doc. N°'})
+                    except KeyError:
+                        continue
                     targets_tables.append(clean_table)
                 else:
+                    try:
+                        table.rename(columns={'DOC. N°': 'Doc. N°'})
+                    except KeyError:
+                        continue
                     print(table)
                     targets_tables.append(table)
         
@@ -344,11 +352,19 @@ def process_pdf_tables1(pdf_file):
                     print("Procesando con cambio de encabezados:")
                     table = table.drop("Unnamed: 0", axis=1)
                     table = change_headers(table) 
+                    try:
+                        table.rename(columns={'DOC. N°': 'Doc. N°'})
+                    except KeyError:
+                        continue
                     print(table)  
                     targets_tables.append(table)
                 else:
                     print("Procesando sin cambio de encabezados:")
                     table = table.drop("Unnamed: 0", axis=1)
+                    try:
+                        table.rename(columns={'DOC. N°': 'Doc. N°'})
+                    except KeyError:
+                        continue
                     print(table)
                     targets_tables.append(table)
         return targets_tables
@@ -381,9 +397,14 @@ def process_pdf_tables2(pdf_file):
                 if re.match(pattern3, first_header):
                     print("Procesando con pattern3:")
                     print(table)
+                    table.rename(columns={'DOC. N°': 'Doc. N°'})
                     target_tables.append(table)
                 else:
                     print("Procesando sin pattern3:")
+                    try:
+                        table.rename(columns={'DOC. N°': 'Doc. N°'})
+                    except KeyError:
+                        continue    
                     print(table)
                     target_tables.append(table)
                               
@@ -458,7 +479,8 @@ def start():
                     if file_name.startswith("LO"):
                         #print("---Proceso A---")                    
                         print(f"Archivo: {file_name} - Procesando con OCR:")
-                        print(find_referencia_in_text(process_pdf_with_ocr(pdf_file)))                   
+                        info_LO = find_referencia_in_text(process_pdf_with_ocr(pdf_file))
+                        print(info_LO)                   
                         
                     
                     else:
@@ -468,7 +490,7 @@ def start():
                                                     
                             try:
                                target_tables = process_pdf_tables2(pdf_file)
-                               transform_situation(target_tables)
+                               #transform_situation(target_tables)
 
                             except Exception as e:
                                 print(f"Error al leer las tablas del archivo en la seccion A {file_name}: {e}")
@@ -481,10 +503,21 @@ def start():
                             
                             try:
                                 target_tables = process_pdf_tables1(pdf_file)
-                                transform_situation(target_tables)
+                                target_tables = transform_situation(target_tables)
 
                             except Exception as e:
                                 print(f"Error al leer las tablas del archivo en la seccion B {file_name}: {e}")
+        
+            # en esta indentacion tengo que modificar lo extraido para obtener tabla final
+            df_final = pd.concat(target_tables, axis=0)
+            print(f"esta es la tabla final unificada:\n{df_final}")
+
+
+
+
+
+
+
     except Exception as e:
         print("Ningún directorio seleccionado")
     

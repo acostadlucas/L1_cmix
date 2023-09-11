@@ -124,4 +124,48 @@ def transformar_situacion(tablas, umbral_similitud=0.843):
     return tablas_modificadas
 
 
-transformar_situacion(tables)
+#transformar_situacion(tables)
+
+################################
+
+import pandas as pd
+
+# DataFrame de ejemplo
+data = {
+    'A': [1, 2, 3],
+    'B': [4, 5, 6]
+}
+df = pd.DataFrame(data)
+
+# Crear un MultiIndex para las columnas
+multi_index = pd.MultiIndex.from_tuples([('Grupo 1', 'A'), ('Grupo 2', 'B')])
+
+# Establecer el MultiIndex en las columnas del DataFrame
+df.columns = multi_index
+
+# Ahora el DataFrame tiene un MultiIndex en las columnas
+#print(df)
+
+
+
+#######################################
+import pandas as pd
+
+# DataFrame de ejemplo
+data = {'Columna1': [1, 2, 3], 'Columna2': [4, 5, 6]}
+df = pd.DataFrame(data)
+
+# Lista de strings que deseas agregar como nuevas columnas
+lista_de_strings = ['Fecha', 'Nº LO', 'Asunto']
+valores= ['12/08/2023', '1561-1-205', 'Descripcion del asunto para Nota']
+
+# Usar un bucle for para agregar cada elemento de la lista como una nueva columna
+def append_LO_data(data_list, df):
+    for i, columna_nueva in enumerate(data_list):
+        df[columna_nueva] = valores[i]
+    return df
+
+# El DataFrame ahora tiene las nuevas columnas agregadas
+print(append_LO_data(lista_de_strings, df))
+
+
