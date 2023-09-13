@@ -160,12 +160,75 @@ lista_de_strings = ['Fecha', 'Nº LO', 'Asunto']
 valores= ['12/08/2023', '1561-1-205', 'Descripcion del asunto para Nota']
 
 # Usar un bucle for para agregar cada elemento de la lista como una nueva columna
-def append_LO_data(data_list, df):
+def append_LO_data(data_list, df, valores):
+    """
+    Agrega nuevas columnas a un DataFrame utilizando una lista de datos.
+
+    Parameters:
+        data_list (list): Lista de nombres de columnas a agregar.
+        df (pandas.DataFrame): El DataFrame al que se agregarán las nuevas columnas.
+        valores (list): Lista de valores correspondientes a las nuevas columnas.
+
+    Returns:
+        pandas.DataFrame: El DataFrame actualizado con las nuevas columnas.
+    """
     for i, columna_nueva in enumerate(data_list):
         df[columna_nueva] = valores[i]
     return df
 
 # El DataFrame ahora tiene las nuevas columnas agregadas
-print(append_LO_data(lista_de_strings, df))
+#print(append_LO_data(lista_de_strings, df, valores))
+
+
+##########################################################
+import pandas as pd
+
+# Crear un DataFrame de ejemplo
+data = {'Columna1': [1, 2, 3],
+        'Columna2': ['A', 'B', 'C'],
+        'Columna3': [4, 5, 6]}
+
+df = pd.DataFrame(data)
+
+# Unir las dos primeras columnas con un "-" y almacenar el resultado en una nueva columna
+df['Columna1-Columna2'] = df['Columna1'].astype(str) + '-' + df['Columna2']
+
+# Eliminar las dos primeras columnas
+df.drop(['Columna1', 'Columna2'], axis=1, inplace=True)
+
+# Reordenar las columnas para que la nueva columna esté en primer lugar
+columnas = df.columns.tolist()
+columnas = ['Columna1-Columna2'] + columnas
+
+# Reemplazar el DataFrame original con las columnas reordenadas
+df = df[columnas]
+
+# Eliminar la última columna que contiene la concatenación
+df = df.iloc[:, :-1]  # Elimina la última columna
+
+# Mostrar el DataFrame resultante
+#print(df)
+
+
+###############################
+import pandas as pd
+
+# Crear un DataFrame vacío con 7 columnas
+DF_BASE = pd.DataFrame(columns=['Doc. N°-Tipo', 'Rev.', 'Descripción', 'Nº LO', 'Fecha', 'Nº LO Resp', 'días'])
+
+# Crear un segundo DataFrame con datos de ejemplo
+data = {'Columna1': [1, 2, 3],
+        'Columna2': ['A', 'B', 'C'],
+        'Columna3': [4, 5, 6]}
+
+df2 = pd.DataFrame(data)
+
+# Llenar df1 con los contenidos de df2
+DF_BASE = pd.concat([DF_BASE, df2], ignore_index=True)
+
+# Mostrar el DataFrame resultante
+print(DF_BASE)
+
+
 
 

@@ -15,6 +15,7 @@ import time
 import difflib
 pd.options.mode.chained_assignment = None
 
+DF_BASE = pd.DataFrame(columns=['Doc. N°-Tipo', 'Rev.', 'Descripción', 'Nº LO', 'Fecha', 'Nº LO Resp', 'Situación'])
 
 def process_pdf_with_ocr(pdf_file):
     """
@@ -455,7 +456,61 @@ def transform_situation(tablas, umbral_similitud=0.843):
             print(f"Esta es la tabla cambiando su situacion \n{tabla}")
     return tablas_modificadas
 
+def append_LO_recibido(df, valores):
+    """
+    Agrega nuevas columnas a un DataFrame utilizando una lista de datos.
+
+    Parameters:
+        df (pandas.DataFrame): El DataFrame al que se agregarán las nuevas columnas.
+        valores (list): Lista de valores correspondientes a las nuevas columnas.
+        df_base (pandas.DataFrame): El DataFrame final para seguimiento de todos los documentos.
+
+    Returns:
+        pandas.DataFrame: El DataFrame actualizado con las nuevas columnas.
+    """
+    recibidos_headers = ['Nº LO','Fecha']
+    for i, columna_nueva in enumerate(recibidos_headers):
+        df[columna_nueva] = valores[i]
+    
+    # Unir las dos primeras columnas con un "-" y almacenar el resultado en una nueva columna
+    df['Doc. N°-Tipo'] = df[df.columns[0]].astype(str) + '-' + df[df.columns[1]]
+    # Eliminar las dos primeras columnas
+    df.drop([df.columns[0], df.columns[1]], axis=1, inplace=True)
+    # Reordenar las columnas para que la nueva columna esté en primer lugar
+    columnas = df.columns.tolist()
+    columnas = ['Doc. N°-Tipo'] + columnas
+    # Reemplazar el DataFrame original con las columnas reordenadas
+    df = df[columnas]
+    # Eliminar la última columna que contiene la concatenación
+    df = df.iloc[:, :-1]  # Elimina la última columna
+    # Llenar df1 con los contenidos de df2
+    #DF_BASE = pd.concat([DF_BASE, df], ignore_index=True)
+
+    return df
+
+# OJO FALTA RESOLVER ESTA FUNCION PARA OBTENER TABLA FINAL CON DATOS DE RESPUESTA
+def append_LO_respuesta(df, valores):
+    """
+    Agrega nuevas columnas a un DataFrame utilizando una lista de datos.
+
+    Parameters:
+        data_list (list): Lista de nombres de columnas a agregar.
+        df (pandas.DataFrame): El DataFrame al que se agregarán las nuevas columnas.
+        valores (list): Lista de valores correspondientes a las nuevas columnas.
+
+    Returns:
+        pandas.DataFrame: El DataFrame actualizado con las nuevas columnas.
+    """
+    recibidos_headers = ['Nº LO','Fecha']
+    for i, columna_nueva in enumerate(recibidos_headers):
+        df[columna_nueva] = valores[i]
+    
+
+
+
+
 def start():
+    global DF_BASE
     # utiliza funcion para una lista con los nombres de las carpetas en el path seleccionado
     start_time = time.time()  # Marca el tiempo de inicio
     try:
@@ -499,7 +554,8 @@ def start():
                         elif file_name.startswith("1561"):
                             print(f"Archivo: {file_name} - Procesando con OCR:")
                             #print(process_pdf_with_ocr(pdf_file))
-                            print(find_referencia_in_text(process_pdf_with_ocr(pdf_file)))
+                            info_LO = find_referencia_in_text(process_pdf_with_ocr(pdf_file))
+                            print(info_LO)
                             
                             try:
                                 target_tables = process_pdf_tables1(pdf_file)
@@ -510,16 +566,17 @@ def start():
         
             # en esta indentacion tengo que modificar lo extraido para obtener tabla final
             df_final = pd.concat(target_tables, axis=0)
-            print(f"esta es la tabla final unificada:\n{df_final}")
+            info_LO = info_LO[:2]
 
+            if len(df_final.columns) == 4:
+                df_final = append_LO_recibido(df_final,info_LO)
+                print(f"esta es la tabla final unificada:\n{df_final}")
 
-
-
-
-
+            DF_BASE = pd.concat([DF_BASE, df_final], ignore_index=True)
+            print(DF_BASE)
 
     except Exception as e:
-        print("Ningún directorio seleccionado")
+        print(f"Ningún directorio seleccionado o {e}")
     
     end_time = time.time()  # Marca el tiempo de finalización
     elapsed_time = end_time - start_time
