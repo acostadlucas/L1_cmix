@@ -227,8 +227,57 @@ df2 = pd.DataFrame(data)
 DF_BASE = pd.concat([DF_BASE, df2], ignore_index=True)
 
 # Mostrar el DataFrame resultante
-print(DF_BASE)
+#print(DF_BASE)
 
 
+######################################################################
+import os
+import pandas as pd
+
+def renombrar_archivos_pdf(dataframe, path):
+    # Obtener una lista de archivos PDF en el directorio
+    archivos_pdf = [archivo for archivo in os.listdir(path) if archivo.endswith('.pdf')]
+
+    # Recorrer cada fila del DataFrame
+    for indice, fila in dataframe.iterrows():
+        # Obtener el valor de la primera columna
+        primer_valor = str(fila[0])[:18]  # Tomar los primeros 18 caracteres
+
+        # Buscar un archivo PDF que coincida con el valor
+        archivo_encontrado = None
+        for archivo_pdf in archivos_pdf:
+            if primer_valor in archivo_pdf:
+                archivo_encontrado = archivo_pdf
+                break
+
+        if archivo_encontrado:
+            # Renombrar el archivo PDF con la concatenación de la fila
+            nuevo_nombre = '-'.join(str(valor) for valor in fila)
+            nuevo_nombre = nuevo_nombre.replace('/', '-')  # Reemplazar barras por guiones
+            nuevo_nombre = nuevo_nombre[:255]  # Limitar el nombre a 255 caracteres (sistema de archivos)
+            
+            # Ruta completa del archivo antiguo y nuevo
+            archivo_antiguo = os.path.join(path, archivo_encontrado)
+            archivo_nuevo = os.path.join(path, f'{nuevo_nombre}.pdf')
+
+            # Renombrar el archivo
+            os.rename(archivo_antiguo, archivo_nuevo)
+            print(f"Renombrado: {archivo_antiguo} -> {archivo_nuevo}")
+        else:
+            print(f"No se encontró un archivo para: {primer_valor}")
+
+# Ejemplo de uso:
+data = {'Columna1': ['Valor1', 'Valor2', 'Valor3'],
+        'Columna2': ['Lorem Ipsum', 'Lorem Ipsum', 'Lorem Ipsum'],
+        'Columna3': ['Neque', 'Neque', 'Neque'],
+        'Columna4': ['porro', 'porro', 'porro'],
+        'Columna5': ['quisquam', 'quisquam', 'quisquam'],
+        'Columna6': ['est', 'est', 'est'],
+        'Columna7': ['qui', 'qui', 'qui'],
+        'Columna8': ['dolorem', 'dolorem', 'dolorem']}
+df = pd.DataFrame(data)
+
+directorio = 'C:\\Users\\lucas\\Downloads\\prueba'
+renombrar_archivos_pdf(df, directorio)
 
 

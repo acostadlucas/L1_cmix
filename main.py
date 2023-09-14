@@ -456,7 +456,7 @@ def transform_situation(tablas, umbral_similitud=0.843):
             print(f"Esta es la tabla cambiando su situacion \n{tabla}")
     return tablas_modificadas
 
-def append_LO_recibido(df, valores):
+def convert_to_final(df, valores):
     """
     Agrega nuevas columnas a un DataFrame utilizando una lista de datos.
 
@@ -483,8 +483,11 @@ def append_LO_recibido(df, valores):
     df = df[columnas]
     # Eliminar la última columna que contiene la concatenación
     df = df.iloc[:, :-1]  # Elimina la última columna
-    # Llenar df1 con los contenidos de df2
-    #DF_BASE = pd.concat([DF_BASE, df], ignore_index=True)
+    # Convertir la columna 'Columna1' a tipo integer
+    #df['Rev.'] = df['Rev.'].astype(int)
+    
+    # ESTA ES LA LINEA DE CODIGO PARA CONVERTIR LA SERIE 'Rev.' a integer 
+    #df['Rev.'] = pd.to_numeric(df['Rev.'], errors='coerce')
 
     return df
 
@@ -568,12 +571,16 @@ def start():
             df_final = pd.concat(target_tables, axis=0)
             info_LO = info_LO[:2]
 
-            if len(df_final.columns) == 4:
-                df_final = append_LO_recibido(df_final,info_LO)
-                print(f"esta es la tabla final unificada:\n{df_final}")
+            #if len(df_final.columns) == 4:
+            df_final = convert_to_final(df_final,info_LO)
+            print(f"esta es la tabla final unificada:\n{df_final}")
+            #print(df_final['Rev.'].dtype)
 
-            DF_BASE = pd.concat([DF_BASE, df_final], ignore_index=True)
-            print(DF_BASE)
+            # AQUI REDACTAR EL CODIGO PARA RENOMBRAR CADA ARCHIVO EN EL DIRECTORIO ACTUAL
+            
+            
+            #DF_BASE = pd.concat([DF_BASE, df_final], ignore_index=True)
+            #print(DF_BASE)
 
     except Exception as e:
         print(f"Ningún directorio seleccionado o {e}")
