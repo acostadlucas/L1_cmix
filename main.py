@@ -483,11 +483,8 @@ def convert_to_final(df, valores):
     df = df[columnas]
     # Eliminar la última columna que contiene la concatenación
     df = df.iloc[:, :-1]  # Elimina la última columna
-    # Convertir la columna 'Columna1' a tipo integer
-    #df['Rev.'] = df['Rev.'].astype(int)
+       
     
-    # ESTA ES LA LINEA DE CODIGO PARA CONVERTIR LA SERIE 'Rev.' a integer 
-    #df['Rev.'] = pd.to_numeric(df['Rev.'], errors='coerce')
 
     return df
 
@@ -508,8 +505,97 @@ def append_LO_respuesta(df, valores):
     for i, columna_nueva in enumerate(recibidos_headers):
         df[columna_nueva] = valores[i]
     
+def renombrar_archivos_pdf_recibidos(dataframe, path):
+    """
+    Renombra archivos PDF en un directorio según los valores de un DataFrame.
 
+    Args:
+        dataframe (pd.DataFrame): El DataFrame que contiene los valores a partir de los cuales se generarán los nuevos nombres.
+        path (str): La ruta al directorio que contiene los archivos PDF a renombrar.
 
+    Returns:
+        None
+
+    """
+    # Obtener una lista de archivos PDF en el directorio
+    archivos_pdf = [archivo for archivo in os.listdir(path) if archivo.endswith('.pdf')]
+
+    # Recorrer cada fila del DataFrame
+    for indice, fila in dataframe.iterrows():
+        # Obtener el valor de la primera columna
+        primer_valor = str(fila[0])[:19]  # Tomar los primeros 19 caracteres
+        #print(f"Estos son los primeros 19 caracteres: {primer_valor}")
+
+        # Buscar un archivo PDF que coincida con el valor
+        archivo_encontrado = None
+        for archivo_pdf in archivos_pdf:
+            if primer_valor in archivo_pdf:
+                archivo_encontrado = archivo_pdf
+                break
+
+        if archivo_encontrado:
+           # Renombrar el archivo PDF con la concatenación de los primeros tres valores de la fila
+            nuevo_nombre = '-'.join(str(valor) for valor in fila[:3])
+            nuevo_nombre = nuevo_nombre.replace('/', '-')  # Reemplazar barras por guiones
+            nuevo_nombre = nuevo_nombre.replace('\r', ' ')
+            nuevo_nombre = nuevo_nombre[:255]  # Limitar el nombre a 255 caracteres (sistema de archivos)
+
+            
+            # Ruta completa del archivo antiguo y nuevo
+            archivo_antiguo = os.path.join(path, archivo_encontrado)
+            archivo_nuevo = os.path.join(path, f'{nuevo_nombre}.pdf')
+
+            # Renombrar el archivo
+            os.rename(archivo_antiguo, archivo_nuevo)
+            print(f"Renombrado: {archivo_antiguo} -> {archivo_nuevo}")
+        else:
+            print(f"No se encontró un archivo para: {primer_valor}")
+
+def renombrar_archivos_pdf_respuestas(dataframe, path):
+    """
+    Renombra archivos PDF en un directorio según los valores de un DataFrame.
+
+    Args:
+        dataframe (pd.DataFrame): El DataFrame que contiene los valores a partir de los cuales se generarán los nuevos nombres.
+        path (str): La ruta al directorio que contiene los archivos PDF a renombrar.
+
+    Returns:
+        None
+
+    """
+    # Obtener una lista de archivos PDF en el directorio
+    archivos_pdf = [archivo for archivo in os.listdir(path) if archivo.endswith('.pdf')]
+
+    # Recorrer cada fila del DataFrame
+    for indice, fila in dataframe.iterrows():
+        # Obtener el valor de la primera columna
+        primer_valor = str(fila[0])[:19]  # Tomar los primeros 19 caracteres
+        #print(f"Estos son los primeros 19 caracteres: {primer_valor}")
+
+        # Buscar un archivo PDF que coincida con el valor
+        archivo_encontrado = None
+        for archivo_pdf in archivos_pdf:
+            if primer_valor in archivo_pdf:
+                archivo_encontrado = archivo_pdf
+                break
+
+        if archivo_encontrado:
+           # Renombrar el archivo PDF con la concatenación de los primeros tres valores de la fila
+            nuevo_nombre = '-'.join(str(valor) for valor in fila[:4])
+            nuevo_nombre = nuevo_nombre.replace('/', '-')  # Reemplazar barras por guiones
+            nuevo_nombre = nuevo_nombre.replace('\r', ' ')
+            nuevo_nombre = nuevo_nombre[:255]  # Limitar el nombre a 255 caracteres (sistema de archivos)
+
+            
+            # Ruta completa del archivo antiguo y nuevo
+            archivo_antiguo = os.path.join(path, archivo_encontrado)
+            archivo_nuevo = os.path.join(path, f'{nuevo_nombre}.pdf')
+
+            # Renombrar el archivo
+            os.rename(archivo_antiguo, archivo_nuevo)
+            print(f"Renombrado: {archivo_antiguo} -> {archivo_nuevo}")
+        else:
+            print(f"No se encontró un archivo para: {primer_valor}")
 
 
 def start():
@@ -532,6 +618,7 @@ def start():
                 if re.search(r"1561", file_name) and "LOP" not in file_name:
                     print("------------------------------------------------------------------------------------------")
                     print(f"estoy considerando que 1561 esta en {file_name}")
+
                     
                     # aqui entra el LO de recibidos 
                     if file_name.startswith("LO"):
@@ -545,13 +632,23 @@ def start():
                         #aca entra la nota ya sea de LT o SE
                         if file_name.startswith("OT") or file_name.startswith("NOTA"):
                             # Si el archivo no contiene "LO" en su nombre, obtener y mostrar los datos de las tablas dentro del PDF usando tabula
-                                                    
+                            #print(f"este esel file name: {file_name}")                        
                             try:
                                target_tables = process_pdf_tables2(pdf_file)
                                #transform_situation(target_tables)
+                               if file_name.startswith("OT"):
+                                    # Aplicar las mismas transformaciones al nombre del archivo
+                                    file_name_new = pdf_file.replace("OT", "NOTA LIC OT ")
+                                    os.rename(pdf_file, file_name_new)
+                                    #print(f"supuestamente se cambio a {os.path.basename(file_name_new)}")
+                               else:
+                                    print("supuestamente no comienza con OT")
+                               
 
                             except Exception as e:
                                 print(f"Error al leer las tablas del archivo en la seccion A {file_name}: {e}")
+                            
+
 
                         # aca entra el LO de respuesta
                         elif file_name.startswith("1561"):
@@ -561,6 +658,7 @@ def start():
                             print(info_LO)
                             
                             try:
+                                
                                 target_tables = process_pdf_tables1(pdf_file)
                                 target_tables = transform_situation(target_tables)
 
@@ -574,13 +672,18 @@ def start():
             #if len(df_final.columns) == 4:
             df_final = convert_to_final(df_final,info_LO)
             print(f"esta es la tabla final unificada:\n{df_final}")
-            #print(df_final['Rev.'].dtype)
+            print(df_final['Rev.'].dtype)
 
             # AQUI REDACTAR EL CODIGO PARA RENOMBRAR CADA ARCHIVO EN EL DIRECTORIO ACTUAL
+            if len(df_final.columns) == 5:
+                renombrar_archivos_pdf_recibidos(df_final, folder_path)
+            else:
+                renombrar_archivos_pdf_respuestas(df_final, folder_path)
             
-            
+            # ESTA ES LA LINEA DE CODIGO PARA CONVERTIR LA SERIE 'Rev.' a integer 
+            df_final['Rev.'] = pd.to_numeric(df_final['Rev.'], errors='coerce')
             #DF_BASE = pd.concat([DF_BASE, df_final], ignore_index=True)
-            #print(DF_BASE)
+            print(df_final['Rev.'].dtype)
 
     except Exception as e:
         print(f"Ningún directorio seleccionado o {e}")

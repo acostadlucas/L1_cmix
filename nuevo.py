@@ -234,14 +234,36 @@ DF_BASE = pd.concat([DF_BASE, df2], ignore_index=True)
 import os
 import pandas as pd
 
-def renombrar_archivos_pdf(dataframe, path):
+import os
+import pandas as pd
+
+import os
+import pandas as pd
+import difflib
+
+import os
+import pandas as pd
+
+def renombrar_archivos_pdf_recibidos(dataframe, path):
+    """
+    Renombra archivos PDF en un directorio según los valores de un DataFrame.
+
+    Args:
+        dataframe (pd.DataFrame): El DataFrame que contiene los valores a partir de los cuales se generarán los nuevos nombres.
+        path (str): La ruta al directorio que contiene los archivos PDF a renombrar.
+
+    Returns:
+        None
+
+    """
     # Obtener una lista de archivos PDF en el directorio
     archivos_pdf = [archivo for archivo in os.listdir(path) if archivo.endswith('.pdf')]
 
     # Recorrer cada fila del DataFrame
     for indice, fila in dataframe.iterrows():
         # Obtener el valor de la primera columna
-        primer_valor = str(fila[0])[:18]  # Tomar los primeros 18 caracteres
+        primer_valor = str(fila[0])[:19]  # Tomar los primeros 19 caracteres
+        #print(f"Estos son los primeros 19 caracteres: {primer_valor}")
 
         # Buscar un archivo PDF que coincida con el valor
         archivo_encontrado = None
@@ -251,10 +273,11 @@ def renombrar_archivos_pdf(dataframe, path):
                 break
 
         if archivo_encontrado:
-            # Renombrar el archivo PDF con la concatenación de la fila
-            nuevo_nombre = '-'.join(str(valor) for valor in fila)
+           # Renombrar el archivo PDF con la concatenación de los primeros tres valores de la fila
+            nuevo_nombre = '-'.join(str(valor) for valor in fila[:3])
             nuevo_nombre = nuevo_nombre.replace('/', '-')  # Reemplazar barras por guiones
-            nuevo_nombre = nuevo_nombre[:255]  # Limitar el nombre a 255 caracteres (sistema de archivos)
+            nuevo_nombre = nuevo_nombre[:500]  # Limitar el nombre a 255 caracteres (sistema de archivos)
+
             
             # Ruta completa del archivo antiguo y nuevo
             archivo_antiguo = os.path.join(path, archivo_encontrado)
@@ -266,8 +289,11 @@ def renombrar_archivos_pdf(dataframe, path):
         else:
             print(f"No se encontró un archivo para: {primer_valor}")
 
+
+
+
 # Ejemplo de uso:
-data = {'Columna1': ['Valor1', 'Valor2', 'Valor3'],
+data = {'Columna1': ['M-2000-35170-003-PL', '229-23256-001-MC', '229-23256-001-PL'],
         'Columna2': ['Lorem Ipsum', 'Lorem Ipsum', 'Lorem Ipsum'],
         'Columna3': ['Neque', 'Neque', 'Neque'],
         'Columna4': ['porro', 'porro', 'porro'],
@@ -277,7 +303,7 @@ data = {'Columna1': ['Valor1', 'Valor2', 'Valor3'],
         'Columna8': ['dolorem', 'dolorem', 'dolorem']}
 df = pd.DataFrame(data)
 
-directorio = 'C:\\Users\\lucas\\Downloads\\prueba'
-renombrar_archivos_pdf(df, directorio)
+directorio = 'C:\\Users\\Lucas Acosta\\Downloads\\cablesBT - copia'
+#renombrar_archivos_pdf(df, directorio)
 
 
