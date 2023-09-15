@@ -233,16 +233,8 @@ DF_BASE = pd.concat([DF_BASE, df2], ignore_index=True)
 ######################################################################
 import os
 import pandas as pd
-
-import os
-import pandas as pd
-
-import os
-import pandas as pd
 import difflib
 
-import os
-import pandas as pd
 
 def renombrar_archivos_pdf_recibidos(dataframe, path):
     """
@@ -303,7 +295,5 @@ data = {'Columna1': ['M-2000-35170-003-PL', '229-23256-001-MC', '229-23256-001-P
         'Columna8': ['dolorem', 'dolorem', 'dolorem']}
 df = pd.DataFrame(data)
 
-directorio = 'C:\\Users\\Lucas Acosta\\Downloads\\cablesBT - copia'
+archivo_path = 'C:\\Users\\lucas\\Downloads\\ejemplo\\ejemploB\\1561-1-766 2023-06-05\\1561-1-766.pdf'
 #renombrar_archivos_pdf(df, directorio)
-
-

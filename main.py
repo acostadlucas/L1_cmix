@@ -488,7 +488,7 @@ def convert_to_final(df, valores):
 
     return df
 
-# OJO FALTA RESOLVER ESTA FUNCION PARA OBTENER TABLA FINAL CON DATOS DE RESPUESTA
+# NO SE ESTA USANDO
 def append_LO_respuesta(df, valores):
     """
     Agrega nuevas columnas a un DataFrame utilizando una lista de datos.
@@ -563,6 +563,7 @@ def renombrar_archivos_pdf_respuestas(dataframe, path):
         None
 
     """
+    
     # Obtener una lista de archivos PDF en el directorio
     archivos_pdf = [archivo for archivo in os.listdir(path) if archivo.endswith('.pdf')]
 
@@ -661,6 +662,12 @@ def start():
                                 
                                 target_tables = process_pdf_tables1(pdf_file)
                                 target_tables = transform_situation(target_tables)
+                                
+                                last_14_chars = pdf_file[-14:]
+                                print(f"AAAAA {last_14_chars} AAAAAAA")
+                                updated_last_14_chars = last_14_chars.replace("1561", "LO 1561")
+                                pdf_file_new = pdf_file[:-14] + updated_last_14_chars
+                                os.rename(pdf_file, pdf_file_new)
 
                             except Exception as e:
                                 print(f"Error al leer las tablas del archivo en la seccion B {file_name}: {e}")
@@ -677,13 +684,16 @@ def start():
             # AQUI REDACTAR EL CODIGO PARA RENOMBRAR CADA ARCHIVO EN EL DIRECTORIO ACTUAL
             if len(df_final.columns) == 5:
                 renombrar_archivos_pdf_recibidos(df_final, folder_path)
+
             else:
                 renombrar_archivos_pdf_respuestas(df_final, folder_path)
+                df_final.rename(columns={'Nº LO': 'Nº LO Resp'}, inplace=True)
             
             # ESTA ES LA LINEA DE CODIGO PARA CONVERTIR LA SERIE 'Rev.' a integer 
             df_final['Rev.'] = pd.to_numeric(df_final['Rev.'], errors='coerce')
             #DF_BASE = pd.concat([DF_BASE, df_final], ignore_index=True)
             print(df_final['Rev.'].dtype)
+            print(f"LA df_final FINALISIMA: \n{df_final}")
 
     except Exception as e:
         print(f"Ningún directorio seleccionado o {e}")
@@ -695,9 +705,14 @@ def start():
 def get_source():
     global selected_directory  # Accede a la variable global
     selected_directory = askdirectory()
-    text = tk.Label(text=selected_directory)
+    text = tk.Label(text=f"Se selecciono '{selected_directory}' como ruta a los documentos")
     text.pack()
 
+def get_directory_csv_file():
+    global csv_directory  # Accede a la variable global
+    csv_directory = askdirectory()
+    text = tk.Label(text= f"Se selecciono '{csv_directory}' como ruta al archivo csv")
+    text.pack()
 
 # Crear una nueva ventana utilizando la biblioteca tkinter
 window = tk.Tk()
@@ -719,6 +734,9 @@ button1.pack()
 
 button2 = tk.Button(text="Start", command=start)
 button2.pack()
+
+button3 = tk.Button(text="CSV folder", command=get_directory_csv_file)
+button3.pack()
 
 
 # Iniciar el bucle principal de la ventana
