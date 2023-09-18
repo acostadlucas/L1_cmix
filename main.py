@@ -13,6 +13,8 @@ import locale
 import pandas as pd
 import time
 import difflib
+import csv
+import openpyxl
 pd.options.mode.chained_assignment = None
 
 DF_BASE = pd.DataFrame(columns=['Doc. N°-Tipo', 'Rev.', 'Descripción', 'Nº LO', 'Fecha', 'Nº LO Resp', 'Situación'])
@@ -456,7 +458,7 @@ def transform_situation(tablas, umbral_similitud=0.843):
             print(f"Esta es la tabla cambiando su situacion \n{tabla}")
     return tablas_modificadas
 
-def convert_to_final(df, valores):
+def convert_to_final_received(df, valores):
     """
     Agrega nuevas columnas a un DataFrame utilizando una lista de datos.
 
@@ -468,7 +470,7 @@ def convert_to_final(df, valores):
     Returns:
         pandas.DataFrame: El DataFrame actualizado con las nuevas columnas.
     """
-    recibidos_headers = ['Nº LO','Fecha']
+    recibidos_headers = ['Nº LO','Recibido']
     for i, columna_nueva in enumerate(recibidos_headers):
         df[columna_nueva] = valores[i]
     
@@ -483,10 +485,40 @@ def convert_to_final(df, valores):
     df = df[columnas]
     # Eliminar la última columna que contiene la concatenación
     df = df.iloc[:, :-1]  # Elimina la última columna
-       
     
-
     return df
+
+def convert_to_final_response(df, valores):
+    """
+    Agrega nuevas columnas a un DataFrame utilizando una lista de datos.
+
+    Parameters:
+        df (pandas.DataFrame): El DataFrame al que se agregarán las nuevas columnas.
+        valores (list): Lista de valores correspondientes a las nuevas columnas.
+        df_base (pandas.DataFrame): El DataFrame final para seguimiento de todos los documentos.
+
+    Returns:
+        pandas.DataFrame: El DataFrame actualizado con las nuevas columnas.
+    """
+    recibidos_headers = ['Nº LO','Respuesta']
+    for i, columna_nueva in enumerate(recibidos_headers):
+        df[columna_nueva] = valores[i]
+    
+    # Unir las dos primeras columnas con un "-" y almacenar el resultado en una nueva columna
+    df['Doc. N°-Tipo'] = df[df.columns[0]].astype(str) + '-' + df[df.columns[1]]
+    # Eliminar las dos primeras columnas
+    df.drop([df.columns[0], df.columns[1]], axis=1, inplace=True)
+    # Reordenar las columnas para que la nueva columna esté en primer lugar
+    columnas = df.columns.tolist()
+    columnas = ['Doc. N°-Tipo'] + columnas
+    # Reemplazar el DataFrame original con las columnas reordenadas
+    df = df[columnas]
+    # Eliminar la última columna que contiene la concatenación
+    df = df.iloc[:, :-1]  # Elimina la última columna
+    
+    return df
+
+
 
 # NO SE ESTA USANDO
 def append_LO_respuesta(df, valores):
@@ -598,11 +630,61 @@ def renombrar_archivos_pdf_respuestas(dataframe, path):
         else:
             print(f"No se encontró un archivo para: {primer_valor}")
 
+def manejar_key_to_files_excel(path_directorio):
+    """
+    Administra key_to_files Excel en un directorio dado.
+    
+    :param path_directorio: Ruta al directorio donde se buscarán y crearán key_to_files Excel.
+    :return: Un diccionario con nombres de archivo como claves y rutas completas a los key_to_files Excel como valores.
+    """
+    key_to_files = {
+        "ProyCivil_SE": None,
+        "ProyElec_SE": None,
+        "ProyElectro_SE": None,
+        "ProyMec_SE": None,
+        "ProyCivil_LT": None,
+        "ProyElectro_LT": None,
+        "ProyMec_LT": None
+    }
+    
+    # Verificar si el directorio existe, si no, crearlo
+    if not os.path.exists(path_directorio):
+        os.makedirs(path_directorio)
+
+    for nombre_archivo in key_to_files.keys():
+        archivo_path = os.path.join(path_directorio, f"{nombre_archivo}.xlsx")
+        
+        # Comprobar si el archivo existe
+        if os.path.exists(archivo_path):
+            key_to_files[nombre_archivo] = archivo_path
+            print(f"El archivo {nombre_archivo}.xlsx existe en {archivo_path}")
+        else:
+            # Si el archivo no existe, créalo con openpyxl
+            wb = openpyxl.Workbook()
+            
+            # Seleccionar la hoja de trabajo activa (por defecto es la primera)
+            hoja = wb.active
+            
+            # Agregar los encabezados
+            encabezados = ['Doc. N°-Tipo', 'Rev.', 'Descripción', 'Nº LO', 'Recibido', 'Nº LO Resp', 'Respuesta', 'Situación']
+            hoja.append(encabezados)
+            
+            wb.save(archivo_path)
+            key_to_files[nombre_archivo] = archivo_path
+            print(f"El archivo {nombre_archivo}.xlsx fue creado en {archivo_path}")
+
+    return key_to_files
+
+
 
 def start():
     global DF_BASE
     # utiliza funcion para una lista con los nombres de las carpetas en el path seleccionado
     start_time = time.time()  # Marca el tiempo de inicio
+    try:
+        manejar_key_to_files_excel(csv_directory)
+    except Exception as e:
+        print(f"No se que puta paso o paso lo siguiente {e}")
     try:
         folder_names = get_folder_names(selected_directory)
     
@@ -675,17 +757,20 @@ def start():
             # en esta indentacion tengo que modificar lo extraido para obtener tabla final
             df_final = pd.concat(target_tables, axis=0)
             info_LO = info_LO[:2]
+            print(f"aaaaaaaaa{ len(df_final.columns)}aaaaaaaaaaaaaaa")
 
-            #if len(df_final.columns) == 4:
-            df_final = convert_to_final(df_final,info_LO)
-            print(f"esta es la tabla final unificada:\n{df_final}")
-            print(df_final['Rev.'].dtype)
-
+               
             # AQUI REDACTAR EL CODIGO PARA RENOMBRAR CADA ARCHIVO EN EL DIRECTORIO ACTUAL
             if len(df_final.columns) == 5:
+                df_final = convert_to_final_response(df_final,info_LO)
+                print(f"esta es la tabla final unificada:\n{df_final}")
+                print(df_final['Rev.'].dtype) 
                 renombrar_archivos_pdf_recibidos(df_final, folder_path)
 
             else:
+                df_final = convert_to_final_received(df_final,info_LO)
+                print(f"esta es la tabla final unificada:\n{df_final}")
+                print(df_final['Rev.'].dtype)
                 renombrar_archivos_pdf_respuestas(df_final, folder_path)
                 df_final.rename(columns={'Nº LO': 'Nº LO Resp'}, inplace=True)
             

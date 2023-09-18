@@ -236,20 +236,20 @@ import pandas as pd
 import difflib
 
 
-def renombrar_archivos_pdf_recibidos(dataframe, path):
+def renombrar_key_to_files_pdf_recibidos(dataframe, path):
     """
-    Renombra archivos PDF en un directorio según los valores de un DataFrame.
+    Renombra key_to_files PDF en un directorio según los valores de un DataFrame.
 
     Args:
         dataframe (pd.DataFrame): El DataFrame que contiene los valores a partir de los cuales se generarán los nuevos nombres.
-        path (str): La ruta al directorio que contiene los archivos PDF a renombrar.
+        path (str): La ruta al directorio que contiene los key_to_files PDF a renombrar.
 
     Returns:
         None
 
     """
-    # Obtener una lista de archivos PDF en el directorio
-    archivos_pdf = [archivo for archivo in os.listdir(path) if archivo.endswith('.pdf')]
+    # Obtener una lista de key_to_files PDF en el directorio
+    key_to_files_pdf = [archivo for archivo in os.listdir(path) if archivo.endswith('.pdf')]
 
     # Recorrer cada fila del DataFrame
     for indice, fila in dataframe.iterrows():
@@ -259,7 +259,7 @@ def renombrar_archivos_pdf_recibidos(dataframe, path):
 
         # Buscar un archivo PDF que coincida con el valor
         archivo_encontrado = None
-        for archivo_pdf in archivos_pdf:
+        for archivo_pdf in key_to_files_pdf:
             if primer_valor in archivo_pdf:
                 archivo_encontrado = archivo_pdf
                 break
@@ -268,7 +268,7 @@ def renombrar_archivos_pdf_recibidos(dataframe, path):
            # Renombrar el archivo PDF con la concatenación de los primeros tres valores de la fila
             nuevo_nombre = '-'.join(str(valor) for valor in fila[:3])
             nuevo_nombre = nuevo_nombre.replace('/', '-')  # Reemplazar barras por guiones
-            nuevo_nombre = nuevo_nombre[:500]  # Limitar el nombre a 255 caracteres (sistema de archivos)
+            nuevo_nombre = nuevo_nombre[:500]  # Limitar el nombre a 255 caracteres (sistema de key_to_files)
 
             
             # Ruta completa del archivo antiguo y nuevo
@@ -296,4 +296,134 @@ data = {'Columna1': ['M-2000-35170-003-PL', '229-23256-001-MC', '229-23256-001-P
 df = pd.DataFrame(data)
 
 archivo_path = 'C:\\Users\\lucas\\Downloads\\ejemplo\\ejemploB\\1561-1-766 2023-06-05\\1561-1-766.pdf'
-#renombrar_archivos_pdf(df, directorio)
+#renombrar_key_to_files_pdf(df, directorio)
+
+############################################################
+import os
+import csv
+
+import os
+import openpyxl
+
+def manejar_key_to_files_excel(path_directorio):
+    """
+    Administra key_to_files Excel en un directorio dado.
+    
+    :param path_directorio: Ruta al directorio donde se buscarán y crearán key_to_files Excel.
+    :return: Un diccionario con nombres de archivo como claves y rutas completas a los key_to_files Excel como valores.
+    """
+    key_to_files = {
+        "ProyCivil_SE": None,
+        "ProyElec_SE": None,
+        "ProyElectro_SE": None,
+        "ProyMec_SE": None,
+        "ProyCivil_LT": None,
+        "ProyElectro_LT": None,
+        "ProyMec_LT": None
+    }
+    
+    # Verificar si el directorio existe, si no, crearlo
+    if not os.path.exists(path_directorio):
+        os.makedirs(path_directorio)
+
+    for nombre_archivo in key_to_files.keys():
+        archivo_path = os.path.join(path_directorio, f"{nombre_archivo}.xlsx")
+        
+        # Comprobar si el archivo existe
+        if os.path.exists(archivo_path):
+            key_to_files[nombre_archivo] = archivo_path
+            print(f"El archivo {nombre_archivo}.xlsx existe en {archivo_path}")
+        else:
+            # Si el archivo no existe, créalo con openpyxl
+            wb = openpyxl.Workbook()
+            
+            # Seleccionar la hoja de trabajo activa (por defecto es la primera)
+            hoja = wb.active
+            
+            # Agregar los encabezados
+            encabezados = ['Doc. N°-Tipo', 'Rev.', 'Descripción', 'Nº LO', 'Recibido', 'Nº LO Resp', 'Respuesta', 'Situación']
+            hoja.append(encabezados)
+            
+            wb.save(archivo_path)
+            key_to_files[nombre_archivo] = archivo_path
+            print(f"El archivo {nombre_archivo}.xlsx fue creado en {archivo_path}")
+
+    return key_to_files
+
+
+# Ejemplo de uso:
+directorio = "C:\\Users\\lucas\\Downloads\\se crea"
+#key_to_files_csv = manejar_key_to_files_csv(directorio)
+
+# Imprimir los resultados
+# for nombre, ruta in key_to_files_csv.items():
+#     print(f"{nombre}: {ruta}")
+
+#######################################################################
+import pandas as pd
+import os
+
+import pandas as pd
+import os
+
+def procesar_dataframe_y_escribir_key_to_files(dataframe, directorios):
+    """
+    Carga los datos en los archivos excel.
+    
+    :param dataframe: dataframe del cual obtendra los datos de los documentos a cargar.
+    :directorios: Un diccionario con nombres de archivo como claves y rutas completas a los archivos como valores.
+    """
+    key_to_files = {
+    "23": "ProyCivil_SE",
+    "24": "ProyElec_SE",
+    "26": "ProyElectro_SE",
+    "25": "ProyMec_SE",
+    "33": "ProyCivil_LT",
+    "36": "ProyElectro_LT",
+    "35": "ProyMec_LT"
+    }
+        
+    for index, fila in dataframe.iterrows():
+        valor_primera_columna = fila[0]
+        
+        # Separar el valor en función de si comienza con L, M u otra letra
+        if valor_primera_columna.startswith(('L', 'M')):
+            valores = valor_primera_columna.split('-')[2:][0][:2]
+        else:
+            valores = valor_primera_columna.split('-')[1:][0][:2]
+
+        # Buscar si los valores coinciden con las claves en key_to_files
+        key_a_buscar = "".join(valores)
+        
+        if key_a_buscar in key_to_files:
+            directorio_key = key_to_files[key_a_buscar]
+            
+            # Obtener el directorio correspondiente desde el diccionario directorios
+            directorio = directorios.get(directorio_key)
+                      
+            # Leer el archivo CSV existente en un DataFrame
+            df_existente = pd.read_excel(directorio)
+            #print(df_existente)
+            
+            # Agregar la fila del DataFrame original al existente
+            df_existente = df_existente.append(fila, ignore_index=True)
+            
+            # Exportar el archivo existente como XLSX pero con los datos cargados
+            df_existente.to_excel(directorio, index=False)
+        else:
+            print(f"La clave {key_a_buscar} no está en el diccionario key_to_files")
+
+
+
+directorios = manejar_key_to_files_excel(directorio)
+
+# DataFrame de ejemplo
+data = {'Doc. N°-Tipo': ['L-23-334564', 'M-26-33564', 'A-234564'],
+        'Descripción': ['Valor1', 'Valor2', 'Valor3']}
+
+df = pd.DataFrame(data)
+
+# Llamada a la función para procesar el DataFrame y escribir en los key_to_files CSV
+procesar_dataframe_y_escribir_key_to_files(df, directorios)
+
+
