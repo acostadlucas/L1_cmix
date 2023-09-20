@@ -518,8 +518,6 @@ def convert_to_final_response(df, valores):
     
     return df
 
-
-
 # NO SE ESTA USANDO
 def append_LO_respuesta(df, valores):
     """
@@ -675,14 +673,62 @@ def manejar_key_to_files_excel(path_directorio):
 
     return key_to_files
 
+def procesar_dataframe_y_escribir_key_to_files(dataframe, directorios):
+    """
+    Carga los datos en los archivos excel.
+    
+    :param dataframe: dataframe del cual obtendra los datos de los documentos a cargar.
+    :directorios: Un diccionario con nombres de archivo como claves y rutas completas a los archivos como valores.
+    """
+    key_to_files = {
+        "23": "ProyCivil_SE",
+        "24": "ProyElec_SE",
+        "26": "ProyElectro_SE",
+        "25": "ProyMec_SE",
+        "33": "ProyCivil_LT",
+        "36": "ProyElectro_LT",
+        "35": "ProyMec_LT"
+    }
+        
+    for index, fila in dataframe.iterrows():
+        valor_primera_columna = fila['Doc. N°-Tipo']
+        
+        # Separar el valor en función de si comienza con L, M u otra letra
+        if valor_primera_columna.startswith(('L', 'M')):
+            valores = valor_primera_columna.split('-')[2:][0][:2]
+            print(valores)
+        else:
+            valores = valor_primera_columna.split('-')[1:][0][:2]
+            print(valores)
 
+        # Buscar si los valores coinciden con las claves en key_to_files
+        key_a_buscar = "".join(valores)
+        
+        if key_a_buscar in key_to_files:
+            directorio_key = key_to_files[key_a_buscar]
+            
+            # Obtener el directorio correspondiente desde el diccionario directorios
+            directorio = directorios.get(directorio_key)
+                      
+            # Leer el archivo Excel existente en un DataFrame
+            df_existente = pd.read_excel(directorio)
+            #print(df_existente)
+            
+            # Concatenar la fila del DataFrame original al existente
+            df_existente = pd.concat([df_existente, fila.to_frame().T], ignore_index=True)
+            
+            # Exportar el archivo existente como XLSX pero con los datos cargados
+            df_existente.to_excel(directorio, index=False)
+        else:
+            print(f"La clave {key_a_buscar} no está en el diccionario key_to_files")
 
 def start():
     global DF_BASE
     # utiliza funcion para una lista con los nombres de las carpetas en el path seleccionado
     start_time = time.time()  # Marca el tiempo de inicio
     try:
-        manejar_key_to_files_excel(csv_directory)
+        directorio_guardar = manejar_key_to_files_excel(csv_directory)
+        
     except Exception as e:
         print(f"No se que puta paso o paso lo siguiente {e}")
     try:
@@ -761,14 +807,14 @@ def start():
 
                
             # AQUI REDACTAR EL CODIGO PARA RENOMBRAR CADA ARCHIVO EN EL DIRECTORIO ACTUAL
-            if len(df_final.columns) == 5:
-                df_final = convert_to_final_response(df_final,info_LO)
+            if len(df_final.columns) == 4:
+                df_final = convert_to_final_received(df_final,info_LO)
                 print(f"esta es la tabla final unificada:\n{df_final}")
                 print(df_final['Rev.'].dtype) 
                 renombrar_archivos_pdf_recibidos(df_final, folder_path)
 
             else:
-                df_final = convert_to_final_received(df_final,info_LO)
+                df_final = convert_to_final_response(df_final,info_LO)
                 print(f"esta es la tabla final unificada:\n{df_final}")
                 print(df_final['Rev.'].dtype)
                 renombrar_archivos_pdf_respuestas(df_final, folder_path)
@@ -779,6 +825,10 @@ def start():
             #DF_BASE = pd.concat([DF_BASE, df_final], ignore_index=True)
             print(df_final['Rev.'].dtype)
             print(f"LA df_final FINALISIMA: \n{df_final}")
+            
+            print(f"este es el directorio donde estan los excel {directorio_guardar}")            
+            procesar_dataframe_y_escribir_key_to_files(df_final,directorio_guardar)
+
 
     except Exception as e:
         print(f"Ningún directorio seleccionado o {e}")

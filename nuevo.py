@@ -352,7 +352,8 @@ def manejar_key_to_files_excel(path_directorio):
 
 
 # Ejemplo de uso:
-directorio = "C:\\Users\\lucas\\Downloads\\se crea"
+# directorio = "C:\\Users\\lucas\\Downloads\\se crea"
+directorio = "C:\\Users\\Lucas Acosta\\Downloads\\seCrea"
 #key_to_files_csv = manejar_key_to_files_csv(directorio)
 
 # Imprimir los resultados
@@ -363,8 +364,6 @@ directorio = "C:\\Users\\lucas\\Downloads\\se crea"
 import pandas as pd
 import os
 
-import pandas as pd
-import os
 
 def procesar_dataframe_y_escribir_key_to_files(dataframe, directorios):
     """
@@ -374,23 +373,25 @@ def procesar_dataframe_y_escribir_key_to_files(dataframe, directorios):
     :directorios: Un diccionario con nombres de archivo como claves y rutas completas a los archivos como valores.
     """
     key_to_files = {
-    "23": "ProyCivil_SE",
-    "24": "ProyElec_SE",
-    "26": "ProyElectro_SE",
-    "25": "ProyMec_SE",
-    "33": "ProyCivil_LT",
-    "36": "ProyElectro_LT",
-    "35": "ProyMec_LT"
+        "23": "ProyCivil_SE",
+        "24": "ProyElec_SE",
+        "26": "ProyElectro_SE",
+        "25": "ProyMec_SE",
+        "33": "ProyCivil_LT",
+        "36": "ProyElectro_LT",
+        "35": "ProyMec_LT"
     }
         
     for index, fila in dataframe.iterrows():
-        valor_primera_columna = fila[0]
+        valor_primera_columna = fila['Doc. N°-Tipo']
         
         # Separar el valor en función de si comienza con L, M u otra letra
         if valor_primera_columna.startswith(('L', 'M')):
             valores = valor_primera_columna.split('-')[2:][0][:2]
+            print(valores)
         else:
             valores = valor_primera_columna.split('-')[1:][0][:2]
+            print(valores)
 
         # Buscar si los valores coinciden con las claves en key_to_files
         key_a_buscar = "".join(valores)
@@ -401,29 +402,30 @@ def procesar_dataframe_y_escribir_key_to_files(dataframe, directorios):
             # Obtener el directorio correspondiente desde el diccionario directorios
             directorio = directorios.get(directorio_key)
                       
-            # Leer el archivo CSV existente en un DataFrame
+            # Leer el archivo Excel existente en un DataFrame
             df_existente = pd.read_excel(directorio)
             #print(df_existente)
             
-            # Agregar la fila del DataFrame original al existente
-            df_existente = df_existente.append(fila, ignore_index=True)
+            # Concatenar la fila del DataFrame original al existente
+            df_existente = pd.concat([df_existente, fila.to_frame().T], ignore_index=True)
             
             # Exportar el archivo existente como XLSX pero con los datos cargados
             df_existente.to_excel(directorio, index=False)
         else:
             print(f"La clave {key_a_buscar} no está en el diccionario key_to_files")
 
-
-
 directorios = manejar_key_to_files_excel(directorio)
+print(directorios)
 
 # DataFrame de ejemplo
-data = {'Doc. N°-Tipo': ['L-23-334564', 'M-26-33564', 'A-234564'],
+data = {'Doc. N°-Tipo': ['L-lucas-354564', 'M-acosta-36564', '229-24000-'],
         'Descripción': ['Valor1', 'Valor2', 'Valor3']}
 
 df = pd.DataFrame(data)
 
 # Llamada a la función para procesar el DataFrame y escribir en los key_to_files CSV
+# Reemplaza 'directorios' con tu propia lógica para obtener los directorios
+# directorios = manejar_key_to_files_excel(directorio)
 procesar_dataframe_y_escribir_key_to_files(df, directorios)
 
 
