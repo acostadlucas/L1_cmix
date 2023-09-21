@@ -406,8 +406,16 @@ def procesar_dataframe_y_escribir_key_to_files(dataframe, directorios):
             df_existente = pd.read_excel(directorio)
             #print(df_existente)
             
-            # Concatenar la fila del DataFrame original al existente
-            df_existente = pd.concat([df_existente, fila.to_frame().T], ignore_index=True)
+            # Comprobar si ya existe un valor idéntico en la columna 'Doc. N°-Tipo'
+            if valor_primera_columna in df_existente['Doc. N°-Tipo'].values:
+                # Si existe, rellenar las columnas vacías en lugar de sobreescribir la fila completa
+                existing_row = df_existente[df_existente['Doc. N°-Tipo'] == valor_primera_columna]
+                for col in df_existente.columns:
+                    if pd.isna(existing_row[col].values[0]):
+                        df_existente.loc[existing_row.index, col] = fila[col]
+            else:
+                # Si no existe, agregar la fila completa al DataFrame existente
+                df_existente = pd.concat([df_existente, fila.to_frame().T], ignore_index=True)          
             
             # Exportar el archivo existente como XLSX pero con los datos cargados
             df_existente.to_excel(directorio, index=False)
@@ -418,8 +426,10 @@ directorios = manejar_key_to_files_excel(directorio)
 print(directorios)
 
 # DataFrame de ejemplo
-data = {'Doc. N°-Tipo': ['L-lucas-354564', 'M-acosta-36564', '229-24000-'],
-        'Descripción': ['Valor1', 'Valor2', 'Valor3']}
+data = {'Doc. N°-Tipo': ['229-23203-005-PL'],
+        'Descripción': ['Valor1'],
+        'Nº LO':['1561-1-756'],
+        'Recibido':['25/05/2023']}
 
 df = pd.DataFrame(data)
 
