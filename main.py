@@ -15,9 +15,40 @@ import time
 import difflib
 import csv
 import openpyxl
+import sys
 pd.options.mode.chained_assignment = None
 
 DF_BASE = pd.DataFrame(columns=['Doc. N°-Tipo', 'Rev.', 'Descripción', 'Nº LO', 'Fecha', 'Nº LO Resp', 'Situación'])
+def clean_unnamed_col(tabla):
+    # Verificar si la tabla tiene 5 columnas y el header de la última columna es similar a "situacion"
+    if len(tabla.columns) == 5:
+        # Definir palabras clave y umbrales de similitud
+        keywords = ["Descripcion", "Unnamed: 0"]
+        similarity_threshold = 0.8  # Puedes ajustar este valor según tu criterio
+
+        # Encontrar el encabezado más similar a cada palabra clave
+        header_similarity = {}
+        for keyword in keywords:
+            closest_match = difflib.get_close_matches(keyword, tabla.columns, n=1, cutoff=similarity_threshold)
+            if closest_match:
+                header_similarity[keyword] = closest_match[0]
+
+        # Verificar si se encontraron las palabras clave
+        if "Descripcion" in header_similarity and "Unnamed: 0" in header_similarity:
+            # Intercambiar los encabezados de las columnas según la similitud
+            tabla.rename(columns={header_similarity["Descripcion"]: "Temp"}, inplace=True)
+            tabla.rename(columns={header_similarity["Unnamed: 0"]: header_similarity["Descripcion"]}, inplace=True)
+            tabla.rename(columns={"Temp": header_similarity["Unnamed: 0"]}, inplace=True)
+
+            # Verificar si la nueva última columna está compuesta solo de NaN
+            last_column = tabla.columns[-1]
+            if tabla[last_column].isnull().all():
+                # Eliminar la nueva última columna
+                tabla.drop(columns=[last_column], inplace=True)
+
+        return tabla
+    else:
+        return tabla
 
 def process_pdf_with_ocr(pdf_file):
     """
@@ -71,6 +102,13 @@ def convert_date_format(fecha_str):
     # Establecer el idioma español para el formato de fecha
     locale.setlocale(locale.LC_TIME, 'es_ES')
 
+    # Reemplazar "setiembre" por "septiembre" en la cadena de fecha
+    fecha_str = fecha_str.replace('setiembre', 'septiembre')
+
+    # Eliminar caracteres de salto de línea ('\n') y espacios en blanco adicionales de la cadena de fecha
+    fecha_str = fecha_str.replace('\n', '').strip()
+    fecha_str = re.sub(r'de(\d{4})', r'de \1', fecha_str)
+
     # Crear un objeto datetime a partir de la fecha en formato "dd de mes de yyyy"
     fecha_obj = datetime.datetime.strptime(fecha_str, "%d de %B de %Y")
 
@@ -90,27 +128,36 @@ def find_referencia_in_text(text_list):
         list of str: Una lista de referencias encontradas en el texto.
     """
     # Patrones de expresión regular para buscar referencias
-    pattern0 = r'N°\s+(\d{4}-\d{1}-\d{3})' 
+    pattern0 = r'N°\s+(\d{4}-\d{1}-\d{3,4})' 
     pattern2 = r'REFERENCIA:(.*?)(?:\n\n|$)' 
-    pattern3 = r'(\d{4}-\d{1}-\d{3})'
+    pattern3 = r'(\d{4}-\d{1}-\d{3,4})'
     pattern1 = r'(\d{1,2}\s+de\s+\w+\s+de\s+\d{4})'
+    pattern1_to = r'(\d{1,2}\s+de\s+\w+\s+de\s+\d{4})\s+de\n\n(\d{4})'
+
     count_ref = 0
     
-    the_patterns = [pattern0, pattern1, pattern2]
+    the_patterns = [pattern0, pattern1, pattern2, pattern1_to]
     
     # Lista para almacenar las referencias encontradas
     referencia_list = []
+    texto_a_reemplazar = " Contratista ANDE (GTI/CSI)\n"   
+    texto_de_reemplazo = " "
+    # Recorre la lista y realiza el reemplazo
+    for i in range(len(text_list)):
+        text_list[i] = text_list[i].replace(texto_a_reemplazar, texto_de_reemplazo)
 
     # Buscar el patrón en el texto de la lista
     for text in text_list:
+        
         for pa in the_patterns:   
             matches = re.findall(pa, text, re.DOTALL)
             referencia_list.extend(matches)
+    print(f"referencias encontradas {referencia_list}")
 
     # Procesar el texto para eliminar líneas adicionales y espacios en blanco
     processed_referencias = []
     for referencia in referencia_list:
-        if re.match(pattern1, referencia):
+        if re.match(pattern1, referencia) or re.match(pattern1_to, referencia):
             referencia = convert_date_format(referencia)
             processed_referencia = re.sub(r'\n', ' ', referencia)
             processed_referencia = re.sub(r'\s{2,}', ' ', referencia)
@@ -125,7 +172,7 @@ def find_referencia_in_text(text_list):
         if re.match(pattern3, ref) and count_ref == 1:
             processed_referencias.remove(ref)
         count_ref += 1
-    
+    print(f"referencias procesadas {processed_referencias}")
     return processed_referencias
 
 def are_tables_equal(table1, table2):
@@ -414,6 +461,8 @@ def process_pdf_tables2(pdf_file):
         if len(target_tables) == 0:
             print("Utilizando 'lattice=True' se rompe todo, entonces uso 'lattice=False'")
             target_tables = process_pdf_tables(pdf_file)  # Llamar a tu función original
+            for i, table in enumerate(target_tables):
+                target_tables[i] = clean_unnamed_col(table)
         return target_tables
     except Exception as e:
         print(f"Error al procesar el archivo {pdf_file} con Tabula: {e}")
@@ -642,7 +691,9 @@ def manejar_key_to_files_excel(path_directorio):
         "ProyMec_SE": None,
         "ProyCivil_LT": None,
         "ProyElectro_LT": None,
-        "ProyMec_LT": None
+        "ProyMec_LT": None,
+        "Suministros_SE": None,
+        "Suministros_LT":None,
     }
     
     # Verificar si el directorio existe, si no, crearlo
@@ -687,40 +738,95 @@ def procesar_dataframe_y_escribir_key_to_files(dataframe, directorios):
         "25": "ProyMec_SE",
         "33": "ProyCivil_LT",
         "36": "ProyElectro_LT",
-        "35": "ProyMec_LT"
+        "35": "ProyMec_LT",
+        "7": "Suministros_SE",
+        "8": "Suministros_LT",
     }
-        
+
+    is_doc_LT = False
+    is_doc_SE = False
+
     for index, fila in dataframe.iterrows():
         valor_primera_columna = fila['Doc. N°-Tipo']
         
         # Separar el valor en función de si comienza con L, M u otra letra
         if valor_primera_columna.startswith(('L', 'M')):
+            is_doc_LT = True
             valores = valor_primera_columna.split('-')[2:][0][:2]
             print(valores)
         else:
+            is_doc_SE = True
             valores = valor_primera_columna.split('-')[1:][0][:2]
             print(valores)
 
         # Buscar si los valores coinciden con las claves en key_to_files
         key_a_buscar = "".join(valores)
-        
+
+
         if key_a_buscar in key_to_files:
             directorio_key = key_to_files[key_a_buscar]
-            
+
             # Obtener el directorio correspondiente desde el diccionario directorios
             directorio = directorios.get(directorio_key)
-                      
+
             # Leer el archivo Excel existente en un DataFrame
             df_existente = pd.read_excel(directorio)
-            #print(df_existente)
-            
-            # Concatenar la fila del DataFrame original al existente
-            df_existente = pd.concat([df_existente, fila.to_frame().T], ignore_index=True)
-            
+
+            # Comprobar si ya existe un valor idéntico en la columna 'Doc. N°-Tipo'
+            if valor_primera_columna in df_existente['Doc. N°-Tipo'].values:
+                # Si existe, verificar si hay nuevas columnas para completar
+                existing_row = df_existente[df_existente['Doc. N°-Tipo'] == valor_primera_columna]
+
+                # Completar las columnas vacías en el registro existente
+                for col in df_existente.columns:
+                    if col in fila.index and pd.isna(existing_row[col].values[0]):
+                        df_existente.loc[existing_row.index, col] = fila[col]
+            else:
+                # Si no existe, agregar la fila completa al DataFrame existente
+                df_existente = pd.concat([df_existente, fila.to_frame().T], ignore_index=True)
+
             # Exportar el archivo existente como XLSX pero con los datos cargados
             df_existente.to_excel(directorio, index=False)
+        
+        elif is_doc_LT or is_doc_SE:
+            if is_doc_SE:
+                print("ESTOY ACA")
+                is_doc_SE = False
+                print(f"Ahora la variables is_doc_SE es {is_doc_SE}")
+                directorio_key = key_to_files["7"]
+                print(f"este es el key donde se debe escribir datos {directorio_key}")
+                directorio = directorios.get(directorio_key)
+                print(f"este es el directorio donde se debe escribir datos {directorio}")
+                df_existente = pd.read_excel(directorio)
+                if valor_primera_columna in df_existente['Doc. N°-Tipo'].values:
+                    existing_row = df_existente[df_existente['Doc. N°-Tipo'] == valor_primera_columna]
+                    for col in df_existente.columns:
+                        if col in fila.index and pd.isna(existing_row[col].values[0]):
+                            df_existente.loc[existing_row.index, col] = fila[col]
+                else:
+                    df_existente = pd.concat([df_existente, fila.to_frame().T], ignore_index=True)
+                    print(f"este es el df ahora:\n{df_existente}")
+
+                df_existente.to_excel(directorio, index=False)
+
+            elif is_doc_LT:
+                is_doc_LT = False
+                directorio_key = key_to_files["8"]
+                directorio = directorios.get(directorio_key)
+                df_existente = pd.read_excel(directorio)
+                if valor_primera_columna in df_existente['Doc. N°-Tipo'].values:
+                    existing_row = df_existente[df_existente['Doc. N°-Tipo'] == valor_primera_columna]
+                    for col in df_existente.columns:
+                        if col in fila.index and pd.isna(existing_row[col].values[0]):
+                            df_existente.loc[existing_row.index, col] = fila[col]
+                else:
+                    df_existente = pd.concat([df_existente, fila.to_frame().T], ignore_index=True)
+                
+                df_existente.to_excel(directorio, index=False)
+                                        
         else:
             print(f"La clave {key_a_buscar} no está en el diccionario key_to_files")
+        
 
 def start():
     global DF_BASE
@@ -831,7 +937,9 @@ def start():
 
 
     except Exception as e:
-        print(f"Ningún directorio seleccionado o {e}")
+        exc_type, exc_obj, exc_tb = sys.exc_info()
+        linea_error = exc_tb.tb_lineno  # Obtiene el número de línea del error
+        print(f"Error en la línea {linea_error}: el siguiente-> {e}")
     
     end_time = time.time()  # Marca el tiempo de finalización
     elapsed_time = end_time - start_time

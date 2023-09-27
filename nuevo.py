@@ -319,7 +319,9 @@ def manejar_key_to_files_excel(path_directorio):
         "ProyMec_SE": None,
         "ProyCivil_LT": None,
         "ProyElectro_LT": None,
-        "ProyMec_LT": None
+        "ProyMec_LT": None,
+        "Suministros_SE": None,
+        "Suministros_LT":None,
     }
     
     # Verificar si el directorio existe, si no, crearlo
@@ -353,7 +355,7 @@ def manejar_key_to_files_excel(path_directorio):
 
 # Ejemplo de uso:
 # directorio = "C:\\Users\\lucas\\Downloads\\se crea"
-directorio = "C:\\Users\\Lucas Acosta\\Downloads\\seCrea"
+directorio = "C:\\Users\\lucas\\Downloads\\otraCrear"
 #key_to_files_csv = manejar_key_to_files_csv(directorio)
 
 # Imprimir los resultados
@@ -379,38 +381,92 @@ def procesar_dataframe_y_escribir_key_to_files(dataframe, directorios):
         "25": "ProyMec_SE",
         "33": "ProyCivil_LT",
         "36": "ProyElectro_LT",
-        "35": "ProyMec_LT"
+        "35": "ProyMec_LT",
+        "7": "Suministros_SE",
+        "8": "Suministros_LT",
     }
-        
+
+    is_doc_LT = False
+    is_doc_SE = False
+
     for index, fila in dataframe.iterrows():
         valor_primera_columna = fila['Doc. N°-Tipo']
         
         # Separar el valor en función de si comienza con L, M u otra letra
         if valor_primera_columna.startswith(('L', 'M')):
+            is_doc_LT = True
             valores = valor_primera_columna.split('-')[2:][0][:2]
             print(valores)
         else:
+            is_doc_SE = True
             valores = valor_primera_columna.split('-')[1:][0][:2]
             print(valores)
 
         # Buscar si los valores coinciden con las claves en key_to_files
         key_a_buscar = "".join(valores)
-        
+
+
         if key_a_buscar in key_to_files:
             directorio_key = key_to_files[key_a_buscar]
-            
+
             # Obtener el directorio correspondiente desde el diccionario directorios
             directorio = directorios.get(directorio_key)
-                      
+
             # Leer el archivo Excel existente en un DataFrame
             df_existente = pd.read_excel(directorio)
-            #print(df_existente)
-            
-            # Concatenar la fila del DataFrame original al existente
-            df_existente = pd.concat([df_existente, fila.to_frame().T], ignore_index=True)
-            
+
+            # Comprobar si ya existe un valor idéntico en la columna 'Doc. N°-Tipo'
+            if valor_primera_columna in df_existente['Doc. N°-Tipo'].values:
+                # Si existe, verificar si hay nuevas columnas para completar
+                existing_row = df_existente[df_existente['Doc. N°-Tipo'] == valor_primera_columna]
+
+                # Completar las columnas vacías en el registro existente
+                for col in df_existente.columns:
+                    if col in fila.index and pd.isna(existing_row[col].values[0]):
+                        df_existente.loc[existing_row.index, col] = fila[col]
+            else:
+                # Si no existe, agregar la fila completa al DataFrame existente
+                df_existente = pd.concat([df_existente, fila.to_frame().T], ignore_index=True)
+
             # Exportar el archivo existente como XLSX pero con los datos cargados
             df_existente.to_excel(directorio, index=False)
+        
+        elif is_doc_LT or is_doc_SE:
+            if is_doc_SE:
+                print("ESTOY ACA")
+                is_doc_SE = False
+                print(f"Ahora la variables is_doc_SE es {is_doc_SE}")
+                directorio_key = key_to_files["7"]
+                print(f"este es el key donde se debe escribir datos {directorio_key}")
+                directorio = directorios.get(directorio_key)
+                print(f"este es el directorio donde se debe escribir datos {directorio}")
+                df_existente = pd.read_excel(directorio)
+                if valor_primera_columna in df_existente['Doc. N°-Tipo'].values:
+                    existing_row = df_existente[df_existente['Doc. N°-Tipo'] == valor_primera_columna]
+                    for col in df_existente.columns:
+                        if col in fila.index and pd.isna(existing_row[col].values[0]):
+                            df_existente.loc[existing_row.index, col] = fila[col]
+                else:
+                    df_existente = pd.concat([df_existente, fila.to_frame().T], ignore_index=True)
+                    print(f"este es el df ahora:\n{df_existente}")
+
+                df_existente.to_excel(directorio, index=False)
+
+            elif is_doc_LT:
+                is_doc_LT = False
+                directorio_key = key_to_files["8"]
+                directorio = directorios.get(directorio_key)
+                df_existente = pd.read_excel(directorio)
+                if valor_primera_columna in df_existente['Doc. N°-Tipo'].values:
+                    existing_row = df_existente[df_existente['Doc. N°-Tipo'] == valor_primera_columna]
+                    for col in df_existente.columns:
+                        if col in fila.index and pd.isna(existing_row[col].values[0]):
+                            df_existente.loc[existing_row.index, col] = fila[col]
+                else:
+                    df_existente = pd.concat([df_existente, fila.to_frame().T], ignore_index=True)
+                
+                df_existente.to_excel(directorio, index=False)
+                                        
         else:
             print(f"La clave {key_a_buscar} no está en el diccionario key_to_files")
 
@@ -418,14 +474,51 @@ directorios = manejar_key_to_files_excel(directorio)
 print(directorios)
 
 # DataFrame de ejemplo
-data = {'Doc. N°-Tipo': ['L-lucas-354564', 'M-acosta-36564', '229-24000-'],
-        'Descripción': ['Valor1', 'Valor2', 'Valor3']}
+data = {'Doc. N°-Tipo': [ '229-16000-'],
+       'Descripción': ['Valor3']}
 
 df = pd.DataFrame(data)
 
 # Llamada a la función para procesar el DataFrame y escribir en los key_to_files CSV
 # Reemplaza 'directorios' con tu propia lógica para obtener los directorios
-# directorios = manejar_key_to_files_excel(directorio)
+directorios = manejar_key_to_files_excel(directorio)
 procesar_dataframe_y_escribir_key_to_files(df, directorios)
 
+################################################
+# import locale
+# import datetime
+# import re
+
+# def convert_date_format(fecha_str):
+#     """
+#     Convierte una fecha en formato "dd de mes de yyyy" a formato "dd/mm/yyyy".
+
+#     Parameters:
+#         fecha_str (str): La fecha en formato "dd de mes de yyyy".
+
+#     Returns:
+#         str: La fecha convertida en formato "dd/mm/yyyy".
+#     """
+#     # Establecer el idioma español para el formato de fecha
+#     locale.setlocale(locale.LC_TIME, 'es_ES')
+
+#     # Reemplazar "setiembre" por "septiembre" en la cadena de fecha
+#     fecha_str = fecha_str.replace('setiembre', 'septiembre')
+
+#     # Eliminar caracteres de salto de línea ('\n') y espacios en blanco adicionales de la cadena de fecha
+#     fecha_str = fecha_str.replace('\n', '').strip()
+#     fecha_str = re.sub(r'de(\d{4})', r'de \1', fecha_str)
+
+#     # Crear un objeto datetime a partir de la fecha en formato "dd de mes de yyyy"
+#     fecha_obj = datetime.datetime.strptime(fecha_str, "%d de %B de %Y")
+
+#     # Convertir la fecha a formato "dd/mm/yyyy"
+#     fecha_formato_deseado = fecha_obj.strftime("%d/%m/%Y")
+
+#     return fecha_formato_deseado
+
+# lista_fechas = ['01 de enero de 2023','02 de febrero de 2024','03 de marzo de 2025','04 de abril de 2026', '05 de mayo de 2027','06 de junio de 2028','07 de julio de 2029','08 de agosto de 2030','09 de setiembre de\n\n2031','10 de octubre de\n\n2032','11 de noviembre de\n\n2033', '12 de diciembre de\n\n2034']
+
+# for fech in lista_fechas:
+#     print(convert_date_format(fech))
 
