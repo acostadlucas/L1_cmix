@@ -635,7 +635,6 @@ def renombrar_archivos_pdf_recibidos(dataframe, path):
     except Exception as e:
         print(f"Pasa lo siguiente {e}")
 
-
 def renombrar_archivos_pdf_respuestas(dataframe, path):
     """
     Renombra archivos PDF en un directorio según los valores de un DataFrame.
@@ -682,7 +681,7 @@ def renombrar_archivos_pdf_respuestas(dataframe, path):
             print(f"Renombrado: {archivo_antiguo} -> {archivo_nuevo}")
         else:
             archivos_sin_encontrar.append(primer_valor)
-            warngin = f"A la hora de cambiar nombres no se econtraron archivos para: {archivos_sin_encontrar}"
+            warngin = f"A la hora de cambiar nombres no se econtraron archivos para: {primer_valor}"
     try:
         return warngin
     except Exception as e:
@@ -759,7 +758,7 @@ def procesar_dataframe_y_escribir_key_to_files(dataframe, directorios):
 
     for index, fila in dataframe.iterrows():
         valor_primera_columna = fila['Doc. N°-Tipo']
-        
+        valor_rev = fila['Rev.']
         # Separar el valor en función de si comienza con L, M u otra letra
         if valor_primera_columna.startswith(('L', 'M')):
             is_doc_LT = True
@@ -783,10 +782,10 @@ def procesar_dataframe_y_escribir_key_to_files(dataframe, directorios):
             # Leer el archivo Excel existente en un DataFrame
             df_existente = pd.read_excel(directorio)
 
-            # Comprobar si ya existe un valor idéntico en la columna 'Doc. N°-Tipo'
-            if valor_primera_columna in df_existente['Doc. N°-Tipo'].values:
+            # Comprobar si ya existe un valor idéntico en las columnas 'Doc. N°-Tipo' y 'Rev.'
+            if (valor_primera_columna in df_existente['Doc. N°-Tipo'].values) and (valor_rev in df_existente[df_existente['Doc. N°-Tipo'] == valor_primera_columna]['Rev.'].values):
                 # Si existe, verificar si hay nuevas columnas para completar
-                existing_row = df_existente[df_existente['Doc. N°-Tipo'] == valor_primera_columna]
+                existing_row = df_existente[(df_existente['Doc. N°-Tipo'] == valor_primera_columna) & (df_existente['Rev.'] == valor_rev)]
 
                 # Completar las columnas vacías en el registro existente
                 for col in df_existente.columns:
@@ -795,6 +794,7 @@ def procesar_dataframe_y_escribir_key_to_files(dataframe, directorios):
             else:
                 # Si no existe, agregar la fila completa al DataFrame existente
                 df_existente = pd.concat([df_existente, fila.to_frame().T], ignore_index=True)
+
 
             # Exportar el archivo existente como XLSX pero con los datos cargados
             df_existente.to_excel(directorio, index=False)
@@ -937,7 +937,7 @@ def start():
                 print(f"esta es la tabla final unificada:\n{df_final}")
                 print(df_final['Rev.'].dtype)
                 info = renombrar_archivos_pdf_respuestas(df_final, folder_path)
-                info = renombrar_archivos_pdf_recibidos(df_final, folder_path)
+                
                 info = tk.Label(text= info)
                 info.pack()
                 df_final.rename(columns={'Nº LO': 'Nº LO Resp'}, inplace=True)
