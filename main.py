@@ -598,7 +598,7 @@ def renombrar_archivos_pdf_recibidos(dataframe, path):
     """
     # Obtener una lista de archivos PDF en el directorio
     archivos_pdf = [archivo for archivo in os.listdir(path) if archivo.endswith('.pdf')]
-
+    archivos_sin_encontrar = []
     # Recorrer cada fila del DataFrame
     for indice, fila in dataframe.iterrows():
         # Obtener el valor de la primera columna
@@ -628,7 +628,13 @@ def renombrar_archivos_pdf_recibidos(dataframe, path):
             os.rename(archivo_antiguo, archivo_nuevo)
             print(f"Renombrado: {archivo_antiguo} -> {archivo_nuevo}")
         else:
-            print(f"No se encontró un archivo para: {primer_valor}")
+            archivos_sin_encontrar.append(primer_valor)
+            warngin = f"A la hora de cambiar nombres no se econtraron archivos para: {archivos_sin_encontrar}"
+    try:
+        return warngin
+    except Exception as e:
+        print(f"Pasa lo siguiente {e}")
+
 
 def renombrar_archivos_pdf_respuestas(dataframe, path):
     """
@@ -645,7 +651,7 @@ def renombrar_archivos_pdf_respuestas(dataframe, path):
     
     # Obtener una lista de archivos PDF en el directorio
     archivos_pdf = [archivo for archivo in os.listdir(path) if archivo.endswith('.pdf')]
-
+    archivos_sin_encontrar = []
     # Recorrer cada fila del DataFrame
     for indice, fila in dataframe.iterrows():
         # Obtener el valor de la primera columna
@@ -675,7 +681,12 @@ def renombrar_archivos_pdf_respuestas(dataframe, path):
             os.rename(archivo_antiguo, archivo_nuevo)
             print(f"Renombrado: {archivo_antiguo} -> {archivo_nuevo}")
         else:
-            print(f"No se encontró un archivo para: {primer_valor}")
+            archivos_sin_encontrar.append(primer_valor)
+            warngin = f"A la hora de cambiar nombres no se econtraron archivos para: {archivos_sin_encontrar}"
+    try:
+        return warngin
+    except Exception as e:
+        print(f"Pasa lo siguiente {e}")
 
 def manejar_key_to_files_excel(path_directorio):
     """
@@ -917,13 +928,18 @@ def start():
                 df_final = convert_to_final_received(df_final,info_LO)
                 print(f"esta es la tabla final unificada:\n{df_final}")
                 print(df_final['Rev.'].dtype) 
-                renombrar_archivos_pdf_recibidos(df_final, folder_path)
+                info = renombrar_archivos_pdf_recibidos(df_final, folder_path)
+                info = tk.Label(text= info)
+                info.pack()
 
             else:
                 df_final = convert_to_final_response(df_final,info_LO)
                 print(f"esta es la tabla final unificada:\n{df_final}")
                 print(df_final['Rev.'].dtype)
-                renombrar_archivos_pdf_respuestas(df_final, folder_path)
+                info = renombrar_archivos_pdf_respuestas(df_final, folder_path)
+                info = renombrar_archivos_pdf_recibidos(df_final, folder_path)
+                info = tk.Label(text= info)
+                info.pack()
                 df_final.rename(columns={'Nº LO': 'Nº LO Resp'}, inplace=True)
             
             # ESTA ES LA LINEA DE CODIGO PARA CONVERTIR LA SERIE 'Rev.' a integer 

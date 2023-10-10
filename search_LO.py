@@ -1,20 +1,15 @@
-import tkinter as tk
-from tkinter.filedialog import askdirectory
+
 import os
 import pathlib as p
 import glob
 import re
-import tabula
+
 import pytesseract
 from pdf2image import convert_from_path
 import datetime
 import locale
-import pandas as pd
+
 import time
-import difflib
-import csv
-import openpyxl
-pd.options.mode.chained_assignment = None
 
 
 DIRECTORIO = "C:\\Users\\lucas\\Downloads\\Recibidos y respuestas"
