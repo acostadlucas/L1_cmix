@@ -299,7 +299,7 @@ def change_headers(df):
     if num_columns == 5:
         new_headers = ['Doc. N°', 'Tipo', 'Rev.', 'Descripción', 'Situación']
     elif num_columns == 4:
-        new_headers = ['Doc. N°', 'Tipo', 'Rev.', 'Descripcion']
+        new_headers = ['Doc. N°', 'Tipo', 'Rev.', 'Descripción']
     else:
         raise ValueError("El dataframe debe tener más 4 o 5 columnas")
     
@@ -441,13 +441,15 @@ def process_pdf_tables2(pdf_file):
         for table in tables:
             pattern3 = r'^\d{3}-\d{5}-\d{3}$'
             first_header = table.columns[0]
+            print(f"este es el firstheader: {first_header}")
+            print(f"es o no de verdad que esta en el primer encabezado: {('Doc. N°' in first_header)}")
             
             # Verificar si el encabezado cumple con los patrones
             if "Doc. N°" in first_header or re.match(pattern3, first_header) or "DOC. N°" in first_header:
                 if re.match(pattern3, first_header):
-                    print("Procesando con pattern3:")
+                    print("Procesando con pattern3 y agregando encabezados")
+                    table = change_headers(table)
                     print(table)
-                    table.rename(columns={'DOC. N°': 'Doc. N°'})
                     target_tables.append(table)
                 else:
                     print("Procesando sin pattern3:")
@@ -593,17 +595,18 @@ def renombrar_archivos_pdf_recibidos(dataframe, path):
         path (str): La ruta al directorio que contiene los archivos PDF a renombrar.
 
     Returns:
-        None
-
+        warning (str): Mensaje indicando los archivos que no se pudieron renombrar.
+        warning2 (str): Mensaje indicando los archivos que no se encontraron para renombrar.
     """
     # Obtener una lista de archivos PDF en el directorio
     archivos_pdf = [archivo for archivo in os.listdir(path) if archivo.endswith('.pdf')]
+    archivos_sin_cambiar = archivos_pdf.copy()
     archivos_sin_encontrar = []
+    
     # Recorrer cada fila del DataFrame
     for indice, fila in dataframe.iterrows():
         # Obtener el valor de la primera columna
         primer_valor = str(fila[0])[:19]  # Tomar los primeros 19 caracteres
-        #print(f"Estos son los primeros 19 caracteres: {primer_valor}")
 
         # Buscar un archivo PDF que coincida con el valor
         archivo_encontrado = None
@@ -613,12 +616,12 @@ def renombrar_archivos_pdf_recibidos(dataframe, path):
                 break
 
         if archivo_encontrado:
-           # Renombrar el archivo PDF con la concatenación de los primeros tres valores de la fila
+            # Renombrar el archivo PDF con la concatenación de los primeros tres valores de la fila
             nuevo_nombre = '-'.join(str(valor) for valor in fila[:3])
             nuevo_nombre = nuevo_nombre.replace('/', '-')  # Reemplazar barras por guiones
             nuevo_nombre = nuevo_nombre.replace('\r', ' ')
             nuevo_nombre = nuevo_nombre[:255]  # Limitar el nombre a 255 caracteres (sistema de archivos)
-
+            archivos_sin_cambiar.remove(archivo_encontrado)
             
             # Ruta completa del archivo antiguo y nuevo
             archivo_antiguo = os.path.join(path, archivo_encontrado)
@@ -629,11 +632,12 @@ def renombrar_archivos_pdf_recibidos(dataframe, path):
             print(f"Renombrado: {archivo_antiguo} -> {archivo_nuevo}")
         else:
             archivos_sin_encontrar.append(primer_valor)
-            warngin = f"A la hora de cambiar nombres no se econtraron archivos para: {archivos_sin_encontrar}"
-    try:
-        return warngin
-    except Exception as e:
-        print(f"Pasa lo siguiente {e}")
+    
+    # Crear mensajes de advertencia
+    warning = f"A la hora de cambiar nombres no se encontraron archivos para: {archivos_sin_encontrar}"
+    warning2 = f"No se cambiaron los nombres de: {archivos_sin_cambiar}"
+
+    return warning, warning2
 
 def renombrar_archivos_pdf_respuestas(dataframe, path):
     """
@@ -651,6 +655,7 @@ def renombrar_archivos_pdf_respuestas(dataframe, path):
     # Obtener una lista de archivos PDF en el directorio
     archivos_pdf = [archivo for archivo in os.listdir(path) if archivo.endswith('.pdf')]
     archivos_sin_encontrar = []
+    archivos_sin_cambiar = []
     # Recorrer cada fila del DataFrame
     for indice, fila in dataframe.iterrows():
         # Obtener el valor de la primera columna
@@ -670,7 +675,7 @@ def renombrar_archivos_pdf_respuestas(dataframe, path):
             nuevo_nombre = nuevo_nombre.replace('/', '-')  # Reemplazar barras por guiones
             nuevo_nombre = nuevo_nombre.replace('\r', ' ')
             nuevo_nombre = nuevo_nombre[:255]  # Limitar el nombre a 255 caracteres (sistema de archivos)
-
+            archivos_sin_cambiar = archivos_pdf.remove(archivo_encontrado)
             
             # Ruta completa del archivo antiguo y nuevo
             archivo_antiguo = os.path.join(path, archivo_encontrado)
@@ -682,8 +687,9 @@ def renombrar_archivos_pdf_respuestas(dataframe, path):
         else:
             archivos_sin_encontrar.append(primer_valor)
             warngin = f"A la hora de cambiar nombres no se econtraron archivos para: {primer_valor}"
+            warngin2 = f"No se cambiaron los nombres de: {archivos_sin_cambiar}"
     try:
-        return warngin
+        return warngin, warngin2
     except Exception as e:
         print(f"Pasa lo siguiente {e}")
 
@@ -928,9 +934,11 @@ def start():
                 df_final = convert_to_final_received(df_final,info_LO)
                 print(f"esta es la tabla final unificada:\n{df_final}")
                 print(df_final['Rev.'].dtype) 
-                info = renombrar_archivos_pdf_recibidos(df_final, folder_path)
-                info = tk.Label(text= info)
-                info.pack()
+                info1, info2 = renombrar_archivos_pdf_recibidos(df_final, folder_path)
+                a = tk.Label(text= info1)
+                a.pack()
+                b = tk.Label(text=info2)
+                b.pack()
 
             else:
                 df_final = convert_to_final_response(df_final,info_LO)
