@@ -843,7 +843,12 @@ def procesar_dataframe_y_escribir_key_to_files(dataframe, directorios):
                                         
         else:
             print(f"La clave {key_a_buscar} no está en el diccionario key_to_files")
-        
+
+def eliminar_filas_nan(dataframes):
+    for df in dataframes:
+        # Eliminar filas con NaN en alguna columna
+        df.dropna(axis=0, how='any', inplace=True)
+    return dataframes       
 
 def start():
     global DF_BASE
@@ -924,6 +929,13 @@ def start():
                                 print(f"Error al leer las tablas del archivo en la seccion B {file_name}: {e}")
         
             # en esta indentacion tengo que modificar lo extraido para obtener tabla final
+            for idx, df in enumerate(target_tables):
+                tiene_nan = df.isna().any().any()
+                if tiene_nan:
+                    target_tables = eliminar_filas_nan(target_tables)
+                else:
+                    continue
+                
             df_final = pd.concat(target_tables, axis=0)
             info_LO = info_LO[:2]
             print(f"aaaaaaaaa{ len(df_final.columns)}aaaaaaaaaaaaaaa")
