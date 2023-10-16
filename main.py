@@ -338,7 +338,7 @@ def process_pdf_tables(pdf_file):
         tables = tabula.read_pdf(pdf_file, pages='all', encoding='latin-1', lattice=False)
 
         # Patrón para identificar números de documento y encabezados de tablas
-        pattern3 = r'^Doc\. N°$|^\d{3}-\d{5}-\d{3}$'
+        pattern3 = r'^\d{3}-\d{5}-\d{3}$'
 
         # Variable para almacenar la primera tabla para comparar
         first_print = pd.DataFrame()
@@ -361,7 +361,13 @@ def process_pdf_tables(pdf_file):
                         clean_table.rename(columns={'DOC. N°': 'Doc. N°'})
                     except KeyError:
                         continue
-                    targets_tables.append(clean_table)
+                    if re.match(pattern3, first_header):
+                        print("Supuestamente no tiene los headers por ende se los agrega.")
+                        clean_table = change_headers(clean_table)
+                        print(clean_table)
+                        targets_tables.append(clean_table)
+                    else:
+                        targets_tables.append(clean_table)
                 else:
                     try:
                         table.rename(columns={'DOC. N°': 'Doc. N°'})

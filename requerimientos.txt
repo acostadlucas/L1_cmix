@@ -1,0 +1,3 @@
+requerimientos
+el escaneado de recibido por parte de ande debe estar en la carpeta
+todas las tablas deben comenzar con las cabezas Doc.-Tipo-......
