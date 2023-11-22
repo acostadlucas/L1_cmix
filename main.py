@@ -142,10 +142,21 @@ def find_referencia_in_text(text_list):
     referencia_list = []
     texto_a_reemplazar = " Contratista ANDE (GTI/CSI)\n"   
     texto_de_reemplazo = " "
+    the_len = len(text_list[0])
+    print(f"THIS IS THE LENGTH: {the_len}")
     # Recorre la lista y realiza el reemplazo
     for i in range(len(text_list)):
         text_list[i] = text_list[i].replace(texto_a_reemplazar, texto_de_reemplazo)
+        print(f"THIS IS THE NEW LENGTH: {len(text_list[0])}")
+        if len(text_list[0]) == the_len:
+            texto_a_reemplazar = " Contratista ANDE (GTICSI)\n"
+            for i in range(len(text_list)):                
+                text_list[i] = text_list[i].replace(texto_a_reemplazar, texto_de_reemplazo)
+        else:
+            continue
 
+
+    print(f"NEW TEXT LIST \n{text_list}")
     # Buscar el patrón en el texto de la lista
     for text in text_list:
         
@@ -887,6 +898,7 @@ def start():
                     if file_name.startswith("LO"):
                         #print("---Proceso A---")                    
                         print(f"Archivo: {file_name} - Procesando con OCR:")
+                        print(process_pdf_with_ocr(pdf_file))
                         info_LO = find_referencia_in_text(process_pdf_with_ocr(pdf_file))
                         print(info_LO)                   
                         
