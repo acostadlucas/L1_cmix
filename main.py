@@ -16,6 +16,7 @@ import difflib
 import csv
 import openpyxl
 import sys
+import shutil
 pd.options.mode.chained_assignment = None
 
 DF_BASE = pd.DataFrame(columns=['Doc. N°-Tipo', 'Rev.', 'Descripción', 'Nº LO', 'Fecha', 'Nº LO Resp', 'Situación'])
@@ -220,9 +221,11 @@ def clean_double_row(df):
         DataFrame: El DataFrame limpiado con valores de celdas NaN combinados.
     """
     # Seleccionar filas con valores NaN en cualquier columna
+    print("1/")
     nan_rows = df[df.isna().any(axis=1)]
 
     # Calcular la proporción de valores no nulos por fila
+    print("2/")
     def calculate_completeness(row):
         non_null_count = row.count()
         total_columns = len(row)
@@ -230,33 +233,53 @@ def clean_double_row(df):
         return completeness
 
     # Aplicar la función a cada fila del DataFrame
+    print("3/")
     nan_rows.loc[:, 'Completeness'] = nan_rows.apply(calculate_completeness, axis=1)
 
     # Inicializar variables
+    print("4/")
     combined_rows = []
     current_combined_row = None
 
     # Iterar a través de las filas con valores NaN
+    print("5/")
     for index, row in nan_rows.iterrows():
+        print('a')
         if current_combined_row is None or row['Completeness'] == 75:
+            print('b')
+            print(current_combined_row)
             if current_combined_row is not None:
                 combined_rows.append(current_combined_row)
+                print(current_combined_row)
             current_combined_row = row.copy()
+            print(current_combined_row)
+        
         else:
+            print('c')
             for col in df.columns:
+                print('d')
+                print(col)
+                print(row[col])
                 if pd.notna(row[col]):
+                    print('e')
                     if pd.notna(current_combined_row[col]):
-                        current_combined_row[col] = current_combined_row[col] + ' ' + row[col]
+                        print('f')
+                        print(current_combined_row)
+                        current_combined_row[col] = str(current_combined_row[col]) + ' ' + str(row[col])
                     else:
+                        print('g')                        
                         current_combined_row[col] = row[col]
+                        print(current_combined_row)
 
     # Agregar la última fila combinada
+    print("6/")
     if current_combined_row is not None:
         combined_rows.append(current_combined_row)
 
     # Crear un DataFrame a partir de las filas combinadas
+    print("7/")
     combined_df = pd.DataFrame(combined_rows)
-
+    print("8/")
     while True:
         new_combined_rows = []
         current_combined_row = None
@@ -280,7 +303,7 @@ def clean_double_row(df):
     combined_df = combined_df.drop(columns=["Completeness"])
     df = df.dropna()
     new_df = pd.concat([df, combined_df])
-    
+    print("9/")
     return new_df
 
 def change_headers(df):
@@ -616,7 +639,10 @@ def renombrar_archivos_pdf_recibidos(dataframe, path):
         warning2 (str): Mensaje indicando los archivos que no se encontraron para renombrar.
     """
     # Obtener una lista de archivos PDF en el directorio
-    archivos_pdf = [archivo for archivo in os.listdir(path) if archivo.endswith('.pdf')]
+    archivos_pdf = [archivo for archivo in os.listdir(path) if archivo.endswith('.pdf') or archivo.endswith('.PDF')]
+    print(f"este es el path donde se buscan los archivos: {path}") 
+    print(f"Estos son los nombres de los archivos dentro del directorio: \n {archivos_pdf}")
+    
     archivos_sin_cambiar = archivos_pdf.copy()
     archivos_sin_encontrar = []
     
@@ -670,7 +696,8 @@ def renombrar_archivos_pdf_respuestas(dataframe, path):
     """
     
     # Obtener una lista de archivos PDF en el directorio
-    archivos_pdf = [archivo for archivo in os.listdir(path) if archivo.endswith('.pdf')]
+    
+    archivos_pdf = [archivo for archivo in os.listdir(path)]
     archivos_sin_encontrar = []
     archivos_sin_cambiar = []
     # Recorrer cada fila del DataFrame
@@ -865,7 +892,128 @@ def eliminar_filas_nan(dataframes):
     for df in dataframes:
         # Eliminar filas con NaN en alguna columna
         df.dropna(axis=0, how='any', inplace=True)
-    return dataframes       
+    return dataframes   
+
+def manejar_key_to_folders(path_directorio):
+    """
+    Administra key_to_folders en un directorio dado.
+    
+    :param path_directorio: Ruta al directorio donde se buscarán y crearán key_to_folders.
+    :return: Un diccionario con nombres de carpeta como claves y rutas completas a las carpetas como valores.
+    """
+    key_to_folders = {
+        "ProyCivil_SE": None,
+        "ProyElec_SE": None,
+        "ProyElectro_SE": None,
+        "ProyMec_SE": None,
+        "ProyCivil_LT": None,
+        "ProyElectro_LT": None,
+        "ProyMec_LT": None,
+        "Suministros_SE": None,
+        "Suministros_LT": None,
+    }
+
+    # Verificar si el directorio existe, si no, crearlo
+    if not os.path.exists(path_directorio):
+        os.makedirs(path_directorio)
+
+    for nombre_carpeta in key_to_folders.keys():
+        carpeta_path = os.path.join(path_directorio, nombre_carpeta)
+
+        # Comprobar si la carpeta existe
+        if os.path.exists(carpeta_path):
+            key_to_folders[nombre_carpeta] = carpeta_path
+            print(f"La carpeta {nombre_carpeta} existe en {carpeta_path}")
+        else:
+            # Si la carpeta no existe, créala
+            os.makedirs(carpeta_path)
+            key_to_folders[nombre_carpeta] = carpeta_path
+            print(f"La carpeta {nombre_carpeta} ha sido creada en {carpeta_path}")
+
+    return key_to_folders
+
+def procesar_dataframe_y_mover_archivos(dataframe, directorio_base, key_to_folders):
+    """
+    Mueve archivos a las carpetas correspondientes según la información del dataframe.
+
+    :param dataframe: DataFrame del cual obtendrá los datos de los documentos a procesar.
+    :param directorio_base: Ruta al directorio base donde se buscarán los archivos.
+    :param key_to_folders: Un diccionario con nombres de carpeta como claves y rutas completas a las carpetas como valores.
+    """
+    key_to_files = {
+        "23": "ProyCivil_SE",
+        "24": "ProyElec_SE",
+        "26": "ProyElectro_SE",
+        "25": "ProyMec_SE",
+        "33": "ProyCivil_LT",
+        "36": "ProyElectro_LT",
+        "35": "ProyMec_LT",
+        "7": "Suministros_SE",
+        "8": "Suministros_LT",
+    }
+    for index, fila in dataframe.iterrows():
+        valor_primera_columna = fila['Doc. N°-Tipo']
+        valor_rev = fila['Rev.']
+
+        # Separar el valor en función de si comienza con L, M u otra letra
+        if valor_primera_columna.startswith(('L', 'M')):
+            valores = valor_primera_columna.split('-')[2:][0][:2]
+        else:
+            valores = valor_primera_columna.split('-')[1:][0][:2]
+
+        # Buscar si los valores coinciden con las claves en key_to_files
+        key_a_buscar = "".join(valores)
+        print(key_to_folders)
+
+        if key_a_buscar in key_to_files:
+            other_key = key_to_files[key_a_buscar]
+            carpeta_destino = key_to_folders[other_key]
+
+            # Construir la ruta completa del archivo a mover
+            archivos_en_directorio = os.listdir(directorio_base)
+            archivo_encontrado = [archivo for archivo in archivos_en_directorio if valor_primera_columna in archivo]
+
+            if archivo_encontrado:
+                archivo_origen = os.path.join(directorio_base, archivo_encontrado[0])
+
+                # Construir la ruta completa de la carpeta destino
+                carpeta_destino = os.path.normpath(carpeta_destino)
+
+                # Verificar si la carpeta destino existe, si no, créala
+                if not os.path.exists(carpeta_destino):
+                    os.makedirs(carpeta_destino)
+
+                # Mover el archivo a la carpeta destino
+                shutil.move(archivo_origen, carpeta_destino)
+
+                print(f"Archivo {archivo_encontrado[0]} movido a {carpeta_destino}")
+        
+        elif valor_primera_columna.startswith(('L', 'M')) and key_a_buscar not in key_to_files:
+            # Construir la ruta completa del archivo a mover
+            archivos_en_directorio = os.listdir(directorio_base)
+            archivo_encontrado = [archivo for archivo in archivos_en_directorio if valor_primera_columna in archivo]
+            # Construir la ruta completa de la carpeta destino
+            carpeta_destino = key_to_folders["Suministros_LT"]
+            archivo_origen = os.path.join(directorio_base, archivo_encontrado[0])
+            # Mover el archivo a la carpeta destino
+            shutil.move(archivo_origen, carpeta_destino)
+
+            print(f"Archivo {archivo_encontrado[0]} movido a {carpeta_destino}")
+
+        elif valor_primera_columna.startswith('229') and key_a_buscar not in key_to_files:
+            # Construir la ruta completa del archivo a mover
+            archivos_en_directorio = os.listdir(directorio_base)
+            archivo_encontrado = [archivo for archivo in archivos_en_directorio if valor_primera_columna in archivo]
+            # Construir la ruta completa de la carpeta destino
+            carpeta_destino = key_to_folders["Suministros_SE"]
+            archivo_origen = os.path.join(directorio_base, archivo_encontrado[0])
+            # Mover el archivo a la carpeta destino
+            shutil.move(archivo_origen, carpeta_destino)
+
+            print(f"Archivo {archivo_encontrado[0]} movido a {carpeta_destino}")
+
+
+
 
 def start():
     global DF_BASE
@@ -878,7 +1026,7 @@ def start():
         print(f"No se que puta paso o paso lo siguiente {e}")
     try:
         folder_names = get_folder_names(selected_directory)
-    
+        task = len(folder_names) 
         # Iterar a través de las carpetas y buscar todos los archivos PDF 
         for folder_name in folder_names:
             folder_path = os.path.join(selected_directory, folder_name)
@@ -953,41 +1101,44 @@ def start():
                     target_tables = eliminar_filas_nan(target_tables)
                 else:
                     continue
-                
-            df_final = pd.concat(target_tables, axis=0)
-            info_LO = info_LO[:2]
-            print(f"aaaaaaaaa{ len(df_final.columns)}aaaaaaaaaaaaaaa")
+            if len(target_tables) > 0:
+                df_final = pd.concat(target_tables, axis=0)
+                info_LO = info_LO[:2]
+                print(f"aaaaaaaaa{ len(df_final.columns)}aaaaaaaaaaaaaaa")
 
                
-            # AQUI REDACTAR EL CODIGO PARA RENOMBRAR CADA ARCHIVO EN EL DIRECTORIO ACTUAL
-            if len(df_final.columns) == 4:
-                df_final = convert_to_final_received(df_final,info_LO)
-                print(f"esta es la tabla final unificada:\n{df_final}")
-                print(df_final['Rev.'].dtype) 
-                info1, info2 = renombrar_archivos_pdf_recibidos(df_final, folder_path)
-                a = tk.Label(text= info1)
-                a.pack()
-                b = tk.Label(text=info2)
-                b.pack()
+                # AQUI REDACTAR EL CODIGO PARA RENOMBRAR CADA ARCHIVO EN EL DIRECTORIO ACTUAL
+                if len(df_final.columns) == 4:
+                    df_final = convert_to_final_received(df_final,info_LO)
+                    print(f"esta es la tabla final unificada:\n{df_final}")
+                    print(df_final['Rev.'].dtype) 
+                    info1, info2 = renombrar_archivos_pdf_recibidos(df_final, folder_path)
+                    a = tk.Label(text= info1)
+                    a.grid(column=0, row=7, columnspan=3)
+                    b = tk.Label(text=info2)
+                    b.grid(column=0, row=8, columnspan=3)
 
-            else:
-                df_final = convert_to_final_response(df_final,info_LO)
-                print(f"esta es la tabla final unificada:\n{df_final}")
-                print(df_final['Rev.'].dtype)
-                info = renombrar_archivos_pdf_respuestas(df_final, folder_path)
+                else:
+                    df_final = convert_to_final_response(df_final,info_LO)
+                    print(f"esta es la tabla final unificada:\n{df_final}")
+                    print(df_final['Rev.'].dtype)
+                    info = renombrar_archivos_pdf_respuestas(df_final, folder_path)
+                    
+                    info = tk.Label(text= info)
+                    info.grid(column=0, row=9, columnspan=3)
+                    df_final.rename(columns={'Nº LO': 'Nº LO Resp'}, inplace=True)
                 
-                info = tk.Label(text= info)
-                info.pack()
-                df_final.rename(columns={'Nº LO': 'Nº LO Resp'}, inplace=True)
-            
-            # ESTA ES LA LINEA DE CODIGO PARA CONVERTIR LA SERIE 'Rev.' a integer 
-            df_final['Rev.'] = pd.to_numeric(df_final['Rev.'], errors='coerce')
-            #DF_BASE = pd.concat([DF_BASE, df_final], ignore_index=True)
-            print(df_final['Rev.'].dtype)
-            print(f"LA df_final FINALISIMA: \n{df_final}")
-            
-            print(f"este es el directorio donde estan los excel {directorio_guardar}")            
-            procesar_dataframe_y_escribir_key_to_files(df_final,directorio_guardar)
+                # ESTA ES LA LINEA DE CODIGO PARA CONVERTIR LA SERIE 'Rev.' a integer 
+                df_final['Rev.'] = pd.to_numeric(df_final['Rev.'], errors='coerce')
+                #DF_BASE = pd.concat([DF_BASE, df_final], ignore_index=True)
+                print(df_final['Rev.'].dtype)
+                print(f"LA df_final FINALISIMA: \n{df_final}")
+                
+                print(f"este es el directorio donde estan los excel {directorio_guardar}")            
+                procesar_dataframe_y_escribir_key_to_files(df_final,directorio_guardar)
+
+            key_folders = manejar_key_to_folders(csv_directory)
+            procesar_dataframe_y_mover_archivos(df_final, folder_path, key_folders)
 
 
     except Exception as e:
@@ -1002,38 +1153,54 @@ def start():
 def get_source():
     global selected_directory  # Accede a la variable global
     selected_directory = askdirectory()
-    text = tk.Label(text=f"Se selecciono '{selected_directory}' como ruta a los documentos")
-    text.pack()
+    text = tk.Label(text=f"[{selected_directory}]")
+    text.grid(column=0, row=3, columnspan=3)
 
 def get_directory_csv_file():
     global csv_directory  # Accede a la variable global
     csv_directory = askdirectory()
-    text = tk.Label(text= f"Se selecciono '{csv_directory}' como ruta al archivo csv")
-    text.pack()
+    text = tk.Label(text= f"[{csv_directory}]")
+    text.grid(column=0, row=5, columnspan=3)
 
 # Crear una nueva ventana utilizando la biblioteca tkinter
 window = tk.Tk()
 window.title("L1")
 window.iconbitmap(default="icons8-compare-50.ico")
-window.minsize(width=650, height=600)
+window.minsize(width=300, height=300)
+window.config(padx=50, pady=50)
 
 # Crear un lienzo en la ventana para mostrar una imagen
 canvas = tk.Canvas(width=150, height=200)
 img = tk.PhotoImage(file="L1_cmix.png")
 img = img.subsample(8, 8)
 canvas.create_image(75, 100, image=img)
-canvas.pack()
+canvas.grid(column=1, row=0)
+
+
+
 
 
 # Crear un botón en la ventana para seleccionar el directorio
 button1 = tk.Button(text="Source 📁", command=get_source)
-button1.pack()
+button1.grid(column=0, row=1)
+
+button3 = tk.Button(text="Excel 📁", command=get_directory_csv_file)
+button3.grid(column=2, row=1)
+
+text1 = tk.Label(text="Ruta seleccionada para acceder a documentos:")
+text1.grid(column=0, row=2, columnspan=3)
+text1_1 = tk.Label(text="[no seleccionado]")
+text1_1.grid(column=0, row=3, columnspan=3)
+
+text2 = tk.Label(text="Ruta seleccionada para registrar documentos:")
+text2.grid(column=0, row=4, columnspan=3)
+text2_1 = tk.Label(text="[no seleccionado]")
+text2_1.grid(column=0, row=5, columnspan=3)
 
 button2 = tk.Button(text="Start", command=start)
-button2.pack()
+button2.grid(column=1, row=6)
 
-button3 = tk.Button(text="CSV folder", command=get_directory_csv_file)
-button3.pack()
+
 
 
 # Iniciar el bucle principal de la ventana
