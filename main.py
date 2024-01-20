@@ -1012,9 +1012,6 @@ def procesar_dataframe_y_mover_archivos(dataframe, directorio_base, key_to_folde
 
             print(f"Archivo {archivo_encontrado[0]} movido a {carpeta_destino}")
 
-
-
-
 def start():
     global DF_BASE
     # utiliza funcion para una lista con los nombres de las carpetas en el path seleccionado
@@ -1176,10 +1173,6 @@ img = img.subsample(8, 8)
 canvas.create_image(75, 100, image=img)
 canvas.grid(column=1, row=0)
 
-
-
-
-
 # Crear un botón en la ventana para seleccionar el directorio
 button1 = tk.Button(text="Source 📁", command=get_source)
 button1.grid(column=0, row=1)
@@ -1199,9 +1192,6 @@ text2_1.grid(column=0, row=5, columnspan=3)
 
 button2 = tk.Button(text="Start", command=start)
 button2.grid(column=1, row=6)
-
-
-
 
 # Iniciar el bucle principal de la ventana
 window.mainloop()
