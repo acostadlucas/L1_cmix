@@ -51,6 +51,10 @@ Known limitations:
 | Automated time | 0.82 min |
 | Efficiency improvement | 97.88% |
 
+### Manual vs automated time comparison
+
+![Results](f10.png)
+
 ## Technologies and Libraries
 
 - **Python ≥ 3.8**
