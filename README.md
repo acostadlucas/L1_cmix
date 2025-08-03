@@ -53,7 +53,7 @@ Known limitations:
 
 ### Manual vs automated time comparison
 
-![Results](f10.png)
+![Results](f10_en.png)
 
 ## Technologies and Libraries
 
