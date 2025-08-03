@@ -15,19 +15,14 @@ Así nació el nombre del repositorio:
 - cmix = ConcretMix
 
 ## Capturas del Proceso
+
 A continuación algunas imágenes que ilustran el funcionamiento del sistema y el impacto del proceso automatizado:
 
-## Interfaz gráfica del programa
-
-![Interfaz del programa](f5.png)
-
-## Nota escaneada con tabla target
-
-![tabla target](f6_target.png)
-
-## Terminal mostrando procesamiento de archivos
-
-![terminal con resultados](f7.png)
+| Imagen | Descripcion |
+|-------|-------------|
+| ![Interfaz del programa](f5.png)| Interfaz gráfica del programa |
+| ![tabla target](f6_target.png) | Nota escaneada con tabla target |
+| ![terminal con resultados](f7.png) | Terminal mostrando procesamiento de archivos |
 
 ## ⚠️ Sobre su Uso y Limitaciones
 Este proyecto no fue diseñado para ser reutilizable por terceros. Fue una solución rápida para un problema específico, en el marco de aprendizaje y aplicación inmediata.
