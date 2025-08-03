@@ -48,6 +48,10 @@ Limitaciones actuales:
 | Tiempo con automatización | 0.82 min  |
 | Eficiencia lograda        | 97.88%    |
 
+### Comparacion de tiempo entre tarea Manual y Automatica
+
+![Results](f10_es.png)
+
 ## Tecnologías y Librerías Usadas
 - Python ≥ 3.8
 
